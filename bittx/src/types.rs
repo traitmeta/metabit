@@ -5,3 +5,9 @@ pub struct Utxo {
     pub value: Amount,
     pub script_pubkey: ScriptBuf,
 }
+
+pub struct TransferInfo {
+    pub sender: String,
+    pub recipient: String,
+    pub amount: u64,
+}

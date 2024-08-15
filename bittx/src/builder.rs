@@ -7,16 +7,16 @@ use std::str::FromStr;
 use crate::types;
 use crate::vsize::get_tx_vsize;
 
-pub fn build_transder_tx() -> Transaction {
+pub fn build_transder_tx(info: types::TransferInfo) -> Transaction {
     let utxo_txid = "your_utxo_txid".parse().unwrap();
     let utxo_vout = 0;
     let utxo_amount = Amount::from_sat(10000);
 
-    let recipient_address = Address::from_str("recipient_address")
+    let recipient_address = Address::from_str(&info.recipient)
         .unwrap()
         .require_network(Network::Bitcoin)
         .unwrap();
-    let recipient_amount = Amount::from_sat(9000);
+    let recipient_amount = Amount::from_sat(info.amount);
 
     let txin = types::Utxo {
         out_point: OutPoint {
