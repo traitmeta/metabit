@@ -11,4 +11,5 @@ pub struct TransferInfo {
     pub sender: String,
     pub recipient: String,
     pub amount: u64,
+    pub feerate: f32,
 }

@@ -6,8 +6,9 @@ pub fn build_transfer_tx(
     sender: &str,
     receiver: &str,
     amount: u64,
+    fee_rate: f32,
     in_utxos: Vec<types::Utxo>,
-) -> Transaction {
+) -> (Transaction, Vec<TxOut>) {
     let sender_address = Address::from_str(&sender)
         .unwrap()
         .require_network(Network::Bitcoin)
@@ -39,11 +40,17 @@ pub fn build_transfer_tx(
     };
     let outputs = vec![receiver_out, change_out];
 
-    build_tx(inputs, outputs, 4.0)
+    build_tx(inputs, outputs, fee_rate)
 }
 
-pub fn build_tx(inputs: Vec<types::Utxo>, mut outputs: Vec<TxOut>, fee_rate: f32) -> Transaction {
+pub fn build_tx(
+    inputs: Vec<types::Utxo>,
+    mut outputs: Vec<TxOut>,
+    fee_rate: f32,
+) -> (Transaction, Vec<TxOut>) {
     let mut tx_ins = vec![];
+    let mut prevouts = Vec::new();
+
     for input in inputs.iter() {
         let tx_in = TxIn {
             previous_output: input.out_point,
@@ -51,7 +58,10 @@ pub fn build_tx(inputs: Vec<types::Utxo>, mut outputs: Vec<TxOut>, fee_rate: f32
             sequence: Sequence(0xffffffff),
             witness: Witness::new(),
         };
-
+        prevouts.push(TxOut {
+            value: input.value,
+            script_pubkey: input.script_pubkey.clone(),
+        });
         tx_ins.push(tx_in);
     }
 
@@ -66,7 +76,7 @@ pub fn build_tx(inputs: Vec<types::Utxo>, mut outputs: Vec<TxOut>, fee_rate: f32
         output: outputs,
     };
 
-    tx
+    (tx, prevouts)
 }
 
 fn calc_change_amount(inputs: Vec<types::Utxo>, outputs: &Vec<TxOut>, fee_rate: f32) -> Amount {
@@ -76,8 +86,8 @@ fn calc_change_amount(inputs: Vec<types::Utxo>, outputs: &Vec<TxOut>, fee_rate: 
         let tx_in = TxIn {
             previous_output: input.out_point,
             script_sig: ScriptBuf::new(),
-            sequence: Sequence(0xffffffff),
-            witness: Witness::new(),
+            sequence: Sequence::ENABLE_RBF_NO_LOCKTIME,
+            witness: Witness::from_slice(&[&[0; SCHNORR_SIGNATURE_SIZE]]),
         };
 
         input_val += input.value.to_sat();
@@ -92,7 +102,8 @@ fn calc_change_amount(inputs: Vec<types::Utxo>, outputs: &Vec<TxOut>, fee_rate: 
         output: outputs.clone(),
     };
 
-    let vsize = get_tx_vsize(tx);
+    // let vsize = get_tx_vsize(tx);
+    let vsize = tx.vsize();
     let fee = fee_rate * vsize as f32;
     let change_amount = input_val - output_val.to_sat() - fee as u64;
     Amount::from_sat(change_amount)

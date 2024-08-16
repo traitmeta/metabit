@@ -1,2 +1,2 @@
 [workspace]
-members = ["bittx", "datatypes", "mempool"]
+members = ["crates/*"]
