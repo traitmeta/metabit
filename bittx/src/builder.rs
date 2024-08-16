@@ -1,42 +1,45 @@
-use bitcoin::absolute::LockTime;
-use bitcoin::blockdata::transaction::{Transaction, TxIn, TxOut};
-use bitcoin::transaction::Version;
-use bitcoin::{Address, Amount, Network, OutPoint, ScriptBuf, Sequence, Witness};
-use std::str::FromStr;
+use super::*;
 
-use crate::types;
 use crate::vsize::get_tx_vsize;
 
-pub fn build_transder_tx(info: types::TransferInfo) -> Transaction {
-    let utxo_txid = "your_utxo_txid".parse().unwrap();
-    let utxo_vout = 0;
-    let utxo_amount = Amount::from_sat(10000);
-
-    let recipient_address = Address::from_str(&info.recipient)
+pub fn build_transfer_tx(
+    sender: &str,
+    receiver: &str,
+    amount: u64,
+    in_utxos: Vec<types::Utxo>,
+) -> Transaction {
+    let sender_address = Address::from_str(&sender)
         .unwrap()
         .require_network(Network::Bitcoin)
         .unwrap();
-    let recipient_amount = Amount::from_sat(info.amount);
-    let sender_address = Address::from_str(&info.sender)
+    let mut inputs = vec![];
+    for utxo in in_utxos.iter() {
+        let txin = types::Utxo {
+            out_point: utxo.out_point,
+            script_pubkey: sender_address.script_pubkey(),
+            value: utxo.value,
+        };
+        inputs.push(txin);
+    }
+
+    let recipient_address = Address::from_str(&receiver)
         .unwrap()
         .require_network(Network::Bitcoin)
         .unwrap();
-    let txin = types::Utxo {
-        out_point: OutPoint {
-            txid: utxo_txid,
-            vout: utxo_vout,
-        },
-        script_pubkey: sender_address.script_pubkey(),
-        value: utxo_amount,
-    };
-
+    let recipient_amount = Amount::from_sat(amount);
     // 创建交易输出
-    let txout = TxOut {
+    let receiver_out = TxOut {
         value: recipient_amount,
         script_pubkey: recipient_address.script_pubkey(),
     };
 
-    build_tx(vec![txin], vec![txout], 4.0)
+    let change_out = TxOut {
+        value: Amount::from_sat(0),
+        script_pubkey: sender_address.script_pubkey(),
+    };
+    let outputs = vec![receiver_out, change_out];
+
+    build_tx(inputs, outputs, 4.0)
 }
 
 pub fn build_tx(inputs: Vec<types::Utxo>, mut outputs: Vec<TxOut>, fee_rate: f32) -> Transaction {

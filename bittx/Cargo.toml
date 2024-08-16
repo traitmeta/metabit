@@ -4,5 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+datatypes = { path = "../datatypes" }
+mempool = { path = "../mempool" }
+
+anyhow = "1.0"
 bitcoin = "0.32"
 bitcoincore-rpc = "0.19"
