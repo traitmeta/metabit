@@ -17,13 +17,16 @@ pub fn build_transder_tx(info: types::TransferInfo) -> Transaction {
         .require_network(Network::Bitcoin)
         .unwrap();
     let recipient_amount = Amount::from_sat(info.amount);
-
+    let sender_address = Address::from_str(&info.sender)
+        .unwrap()
+        .require_network(Network::Bitcoin)
+        .unwrap();
     let txin = types::Utxo {
         out_point: OutPoint {
             txid: utxo_txid,
             vout: utxo_vout,
         },
-        script_pubkey: ScriptBuf::new(),
+        script_pubkey: sender_address.script_pubkey(),
         value: utxo_amount,
     };
 

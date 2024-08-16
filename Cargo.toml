@@ -1,2 +1,2 @@
 [workspace]
-members = ["bittx"]
+members = ["bittx", "datatypes", "mempool"]
