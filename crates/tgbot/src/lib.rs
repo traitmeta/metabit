@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Ok, Result};
 use serde_json::json;
 use teloxide::prelude::*;
 use teloxide::types::Message;
@@ -19,14 +19,14 @@ impl TgBot {
         }
     }
 
-    pub async fn send_msg_to_topic(&self, msg: &str) {
+    pub async fn send_msg_to_topic(&self, msg: &str) -> Result<()> {
         let chat_id = ChatId(self.chat_id);
         let topic_id = ThreadId(MessageId(self.topic_id));
         self.bot
             .send_message(chat_id, msg)
             .message_thread_id(topic_id)
-            .await
-            .unwrap();
+            .await?;
+        Ok(())
     }
 
     pub async fn get_topic(&self) {

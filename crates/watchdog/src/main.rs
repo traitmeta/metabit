@@ -1,42 +1,94 @@
-use bitcoin::{consensus::encode::deserialize, Transaction};
+use std::time::Duration;
+
+use anyhow::Result;
+use bitcoin::{
+    consensus::{deserialize, encode::serialize_hex},
+    Transaction,
+};
 use tgbot::TgBot;
-use watchdog::config;
-use zmq::Context;
+use tokio::{
+    signal::{
+        self,
+        unix::{signal, Signal, SignalKind},
+    },
+    sync::broadcast,
+    time::sleep,
+};
+use tracing::{error, info, warn};
+use tracing_appender::{
+    non_blocking::WorkerGuard,
+    rolling::{RollingFileAppender, Rotation},
+};
+use tracing_subscriber::{
+    fmt::{self, writer::MakeWriterExt},
+    layer::SubscriberExt,
+    util::SubscriberInitExt,
+    EnvFilter, Layer, Registry,
+};
+use watchdog::{config, receiver};
+
+const GRACEFUL_SHUTDOWN_TIMEOUT: u64 = 30;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<()> {
+    // TIPS: guard must have same long lifetime with main
+    let guard = logger_init();
+
+    let (tx, mut rx) = broadcast::channel(1);
+    let mut sigterm = signal(SignalKind::terminate())?;
+    let mut sigint = signal(SignalKind::interrupt())?;
+
     let cfg = config::read_config();
-    let context = Context::new();
-    let subscriber = context.socket(zmq::SUB).unwrap();
-    subscriber
-        .connect(format!("tcp://{}:{}", cfg.bitcoin.zmq, cfg.bitcoin.zmq_port).as_str())
-        .unwrap();
-    subscriber.set_subscribe(b"rawtx").unwrap();
-    println!("Subscribed to raw transactions...");
-    let bot = TgBot::new(&cfg.tgbot.token, cfg.tgbot.chat_id, cfg.tgbot.tx_topic_id);
+    let handle = tokio::spawn(async {
+        receiver::receive_rawtx(rx, cfg).await;
+    });
 
-    loop {
-        let _topic = subscriber.recv_msg(0).unwrap();
-        let tx_data = subscriber.recv_bytes(0).unwrap();
-
-        match deserialize::<Transaction>(&tx_data) {
-            Ok(tx) => {
-                for input in &tx.input {
-                    if input.witness.len() > 0 && input.witness[0].len() < 64 {
-                        let mut add = "";
-                        if input.witness.len() > 3 {
-                            add = "May be multisign";
-                        }
-
-                        println!("Received transaction hash: {}", tx.txid());
-                        let msg = format!("TxID : {}, {}", tx.txid().to_string().as_str(), add);
-                        bot.send_msg_to_topic(msg.as_str()).await;
-                    }
-                }
-            }
-            Err(_) => {
-                // eprintln!("Failed to deserialize transaction: {}", e);
-            }
+    tokio::select! {
+        _ = sigterm.recv() => {
+            info!("Received SIGTERM, shutting down gracefully...");
+        }
+        _ = sigint.recv() => {
+            info!("Received SIGINT, shutting down gracefully...");
         }
     }
+
+    tx.send(true).unwrap();
+    let start_time = std::time::Instant::now();
+    while start_time.elapsed().as_secs() < GRACEFUL_SHUTDOWN_TIMEOUT {
+        if is_all_request_completed() {
+            break;
+        }
+        sleep(Duration::from_secs(1)).await;
+    }
+
+    handle.await.unwrap();
+    if !is_all_request_completed() {
+        println!("Graceful shutdown timeout, closing server...");
+    }
+
+    Ok(())
+}
+
+fn logger_init() -> WorkerGuard {
+    let formatting_layer = fmt::layer().pretty().with_writer(std::io::stdout);
+    let file_appender = RollingFileAppender::new(Rotation::HOURLY, "logs/watchdog", "watchdog.log");
+    let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
+    let file_layer = fmt::layer()
+        .with_ansi(false)
+        .with_writer(non_blocking.and(std::io::stdout))
+        .with_filter(tracing_subscriber::filter::LevelFilter::INFO)
+        .boxed();
+
+    Registry::default()
+        .with(formatting_layer)
+        .with(file_layer)
+        .with(EnvFilter::from_default_env())
+        .init();
+
+    guard
+}
+
+fn is_all_request_completed() -> bool {
+    // 判断是否所有请求都已经处理完成
+    true
 }
