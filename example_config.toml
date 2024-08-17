@@ -1,0 +1,10 @@
+[bitcoin]
+zmq = "127.0.0.1"
+zmq_port = 28333
+
+[tgbot]
+token = ""
+chat_id = ""
+sold_topic_id = 1
+sniper_topic_id = 2
+tx_topic_id = 3
