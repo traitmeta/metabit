@@ -1,16 +1,7 @@
-use std::time::Duration;
-
 use anyhow::Result;
-use bitcoin::{
-    consensus::{deserialize, encode::serialize_hex},
-    Transaction,
-};
-use tgbot::TgBot;
+use std::time::Duration;
 use tokio::{
-    signal::{
-        self,
-        unix::{signal, Signal, SignalKind},
-    },
+    signal::unix::{signal, SignalKind},
     sync::broadcast,
     time::sleep,
 };
@@ -34,7 +25,7 @@ async fn main() -> Result<()> {
     // TIPS: guard must have same long lifetime with main
     let guard = logger_init();
 
-    let (tx, mut rx) = broadcast::channel(1);
+    let (tx, rx) = broadcast::channel(1);
     let mut sigterm = signal(SignalKind::terminate())?;
     let mut sigint = signal(SignalKind::interrupt())?;
 
@@ -42,7 +33,7 @@ async fn main() -> Result<()> {
     let handle = tokio::spawn(async {
         receiver::receive_rawtx(rx, cfg).await;
     });
-
+    
     tokio::select! {
         _ = sigterm.recv() => {
             info!("Received SIGTERM, shutting down gracefully...");

@@ -1,4 +1,4 @@
-use crate::config;
+use crate::{config, multisign};
 pub use anyhow::Result;
 use bitcoin::{consensus::deserialize, Transaction};
 use std::time::Duration;
@@ -28,32 +28,7 @@ pub async fn receive_rawtx(mut stop_sig: Receiver<bool>, cfg: config::Config) {
                 let tx_data = subscriber.recv_bytes(0).unwrap();
                 match deserialize::<Transaction>(&tx_data) {
                     Ok(tx) => {
-                        let mut exist = false;
-                        for input in &tx.input {
-                            if input.witness.len() <= 0 {
-                                continue;
-                            }
-
-                            if input.witness[0].len() >= 64 {
-                                continue;
-                            }
-
-                            if input.witness.len() > 3 {
-                                warn!("Received transaction hash: {}. Maybe MultiSign", tx.txid());
-                                continue;
-                            }
-
-                            exist = true;
-                            break;
-                        }
-
-                        if exist {
-                            info!("Received transaction hash: {}", tx.txid());
-                            match bot.send_msg_to_topic(tx.txid().to_string().as_str()).await {
-                                Ok(_) => {}
-                                Err(e) => error!("send msg to tg failed. {}", e),
-                            };
-                        }
+                        handle_tx(tx, &bot).await;
                     }
                     Err(_) => {
                         // eprintln!("Failed to deserialize transaction: {}", e);
@@ -61,5 +36,46 @@ pub async fn receive_rawtx(mut stop_sig: Receiver<bool>, cfg: config::Config) {
                 }
             }
         }
+    }
+}
+
+async fn handle_tx(tx: Transaction, bot: &TgBot) {
+    let mut exist = false;
+    let mut input_idx = 0;
+    for (idx, input) in tx.input.iter().enumerate() {
+        if input.witness.len() <= 0 {
+            continue;
+        }
+
+        if input.witness[0].len() >= 32 {
+            continue;
+        }
+
+        // if input.witness.len() > 3 {
+        //     warn!("Received transaction hash: {}. Maybe MultiSign", tx.txid());
+        //     continue;
+        // }
+
+        if multisign::is_multisig_witness(&input.witness) {
+            warn!("Received transaction hash: {}. MultiSign", tx.txid());
+            continue;
+        }
+
+        exist = true;
+        input_idx = idx;
+        break;
+    }
+
+    if exist {
+        info!(
+            "Received transaction hash: {}, idx : {}",
+            tx.txid(),
+            input_idx
+        );
+        let msg = format!("txid:{},idx:{}", tx.txid().to_string(), input_idx);
+        match bot.send_msg_to_topic(msg.as_str()).await {
+            Ok(_) => {}
+            Err(e) => error!("send msg to tg failed. {}", e),
+        };
     }
 }
