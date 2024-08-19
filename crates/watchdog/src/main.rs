@@ -23,7 +23,7 @@ const GRACEFUL_SHUTDOWN_TIMEOUT: u64 = 30;
 #[tokio::main]
 async fn main() -> Result<()> {
     // TIPS: guard must have same long lifetime with main
-    let guard = logger_init();
+    let _guard = logger_init();
 
     let (tx, rx) = broadcast::channel(1);
     let mut sigterm = signal(SignalKind::terminate())?;

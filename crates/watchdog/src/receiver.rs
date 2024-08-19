@@ -1,6 +1,6 @@
-use crate::{config, multisign};
+use crate::{config, lightning, multisign};
 pub use anyhow::Result;
-use bitcoin::{consensus::deserialize, Transaction};
+use bitcoin::{consensus::deserialize, hashes::hex::ToHex, Transaction};
 use std::time::Duration;
 use tgbot::TgBot;
 use tokio::{sync::broadcast::Receiver, time::sleep};
@@ -58,6 +58,16 @@ async fn handle_tx(tx: Transaction, bot: &TgBot) {
 
         if multisign::is_multisig_witness(&input.witness) {
             warn!("Received transaction hash: {}. MultiSign", tx.txid());
+            continue;
+        }
+
+        if input.witness.len() >= 1
+            && lightning::is_swept_lightning_anchor(&input.witness[1].to_hex())
+        {
+            warn!(
+                "Received transaction hash: {}. Swept Lightning Anchor",
+                tx.txid()
+            );
             continue;
         }
 
