@@ -1,6 +1,6 @@
 use crate::{config, lightning, multisign};
 pub use anyhow::Result;
-use bitcoin::{consensus::deserialize, hashes::hex::ToHex, Transaction};
+use bitcoin::{consensus::deserialize, Transaction};
 use std::time::Duration;
 use tgbot::TgBot;
 use tokio::{sync::broadcast::Receiver, time::sleep};
@@ -40,6 +40,7 @@ pub async fn receive_rawtx(mut stop_sig: Receiver<bool>, cfg: config::Config) {
 }
 
 async fn handle_tx(tx: Transaction, bot: &TgBot) {
+    let txid = tx.compute_txid();
     let mut exist = false;
     let mut input_idx = 0;
     for (idx, input) in tx.input.iter().enumerate() {
@@ -57,16 +58,16 @@ async fn handle_tx(tx: Transaction, bot: &TgBot) {
         // }
 
         if multisign::is_multisig_witness(&input.witness) {
-            warn!("Received transaction hash: {}. MultiSign", tx.txid());
+            warn!("Received transaction hash: {}. MultiSign", txid);
             continue;
         }
 
         if input.witness.len() >= 1
-            && lightning::is_swept_lightning_anchor(&input.witness[1].to_hex())
+            && lightning::is_swept_lightning_anchor(&hex::encode(&input.witness[1]))
         {
             warn!(
                 "Received transaction hash: {}. Swept Lightning Anchor",
-                tx.txid()
+                txid
             );
             continue;
         }
@@ -77,12 +78,8 @@ async fn handle_tx(tx: Transaction, bot: &TgBot) {
     }
 
     if exist {
-        info!(
-            "Received transaction hash: {}, idx : {}",
-            tx.txid(),
-            input_idx
-        );
-        let msg = format!("txid:{},idx:{}", tx.txid().to_string(), input_idx);
+        info!("Received transaction hash: {}, idx : {}", txid, input_idx);
+        let msg = format!("txid:{},idx:{}", txid.to_string(), input_idx);
         match bot.send_msg_to_topic(msg.as_str()).await {
             Ok(_) => {}
             Err(e) => error!("send msg to tg failed. {}", e),

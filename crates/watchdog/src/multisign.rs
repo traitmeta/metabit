@@ -1,12 +1,12 @@
 use bitcoin::blockdata::opcodes::all::{
     OP_CHECKMULTISIG, OP_CHECKMULTISIGVERIFY, OP_CHECKSIG, OP_CHECKSIGVERIFY,
 };
-use bitcoin::blockdata::script::Instruction;
-use bitcoin::blockdata::script::Script;
+use bitcoin::script::Instruction;
+use bitcoin::{Script, Witness};
 
-pub fn is_multisig_witness(witness: &Vec<Vec<u8>>) -> bool {
+pub fn is_multisig_witness(witness: &Witness) -> bool {
     if let Some(redeem_script_bytes) = witness.last() {
-        let redeem_script = Script::from(redeem_script_bytes.clone());
+        let redeem_script = Script::from_bytes(redeem_script_bytes);
         redeem_script
             .instructions()
             .any(|instruction| match instruction {
@@ -21,9 +21,9 @@ pub fn is_multisig_witness(witness: &Vec<Vec<u8>>) -> bool {
     }
 }
 
-pub fn is_signed_witness(witness: &Vec<Vec<u8>>) -> bool {
+pub fn is_signed_witness(witness: &Witness) -> bool {
     if let Some(redeem_script_bytes) = witness.last() {
-        let redeem_script = Script::from(redeem_script_bytes.clone());
+        let redeem_script = Script::from_bytes(redeem_script_bytes);
         redeem_script
             .instructions()
             .any(|instruction| match instruction {
