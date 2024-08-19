@@ -15,19 +15,16 @@ pub async fn sign_tx(
     prevouts: Vec<TxOut>,
     sign_idx: Vec<usize>,
 ) -> Result<Vec<u8>> {
-    // 发送方的私钥
     let private_key = PrivateKey::from_wif("your_private_key_wif").unwrap();
 
-    // 构建签名哈希缓存
     let mut tx = tx;
     for idx in sign_idx.iter() {
         sign_taproot_key_spend(private_key, &mut tx, &prevouts, *idx);
     }
 
-    // 将交易序列化为字节数组
     let raw_tx = serialize(&tx);
     info!("{}", serialize_hex(&tx));
-    // // 广播交易
+
     // let txid = client.send_raw_transaction(&raw_tx).unwrap();
     // println!("Transaction broadcasted with txid: {}", txid);
     Ok(raw_tx)
