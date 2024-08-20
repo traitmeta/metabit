@@ -16,7 +16,11 @@ use tracing_subscriber::{
     util::SubscriberInitExt,
     EnvFilter, Layer, Registry,
 };
-use watchdog::{config, receiver};
+use watchdog::{
+    btcrpc::{self, BtcCli},
+    checker::Checker,
+    config, receiver,
+};
 
 const GRACEFUL_SHUTDOWN_TIMEOUT: u64 = 30;
 
@@ -30,10 +34,12 @@ async fn main() -> Result<()> {
     let mut sigint = signal(SignalKind::interrupt())?;
 
     let cfg = config::read_config();
-    let handle = tokio::spawn(async {
-        receiver::receive_rawtx(rx, cfg).await;
+    let btccli = BtcCli::new(&cfg.bitcoin.endpoint, &cfg.bitcoin.user, &cfg.bitcoin.pass);
+    let checker = Checker::new(btccli);
+    let handle = tokio::spawn(async move {
+        receiver::receive_rawtx(rx, cfg, &checker).await;
     });
-    
+
     tokio::select! {
         _ = sigterm.recv() => {
             info!("Received SIGTERM, shutting down gracefully...");

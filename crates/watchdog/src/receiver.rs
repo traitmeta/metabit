@@ -1,4 +1,4 @@
-use crate::{config, lightning, multisign};
+use crate::{checker::Checker, config, lightning};
 pub use anyhow::Result;
 use bitcoin::{consensus::deserialize, Transaction};
 use std::time::Duration;
@@ -8,7 +8,7 @@ use tracing::{error, info, warn};
 use zmq::Context;
 
 #[tracing::instrument(skip_all)]
-pub async fn receive_rawtx(mut stop_sig: Receiver<bool>, cfg: config::Config) {
+pub async fn receive_rawtx(mut stop_sig: Receiver<bool>, cfg: config::Config, checker: &Checker) {
     let context = Context::new();
     let subscriber = context.socket(zmq::SUB).unwrap();
     subscriber
@@ -28,7 +28,7 @@ pub async fn receive_rawtx(mut stop_sig: Receiver<bool>, cfg: config::Config) {
                 let tx_data = subscriber.recv_bytes(0).unwrap();
                 match deserialize::<Transaction>(&tx_data) {
                     Ok(tx) => {
-                        handle_tx(tx, &bot).await;
+                        handle_tx(tx, &bot,checker).await;
                     }
                     Err(_) => {
                         // eprintln!("Failed to deserialize transaction: {}", e);
@@ -39,7 +39,7 @@ pub async fn receive_rawtx(mut stop_sig: Receiver<bool>, cfg: config::Config) {
     }
 }
 
-async fn handle_tx(tx: Transaction, bot: &TgBot) {
+async fn handle_tx(tx: Transaction, bot: &TgBot, checker: &Checker) {
     let txid = tx.compute_txid();
     let mut exist = false;
     let mut input_idx = 0;
@@ -52,13 +52,7 @@ async fn handle_tx(tx: Transaction, bot: &TgBot) {
             continue;
         }
 
-        // if input.witness.len() > 3 {
-        //     warn!("Received transaction hash: {}. Maybe MultiSign", tx.txid());
-        //     continue;
-        // }
-
-        if multisign::is_multisig_witness(&input.witness) {
-            warn!("Received transaction hash: {}. MultiSign", txid);
+        if checker.check_input_sign(&input) {
             continue;
         }
 

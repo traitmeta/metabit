@@ -65,6 +65,43 @@ pub fn check_witness_signed(input: &TxIn, prev_tx: &Transaction) -> bool {
     false
 }
 
+pub fn check_input_signed(input: &TxIn, prev_out: &TxOut) -> bool {
+    if input.witness.len() <= 1 {
+        return true;
+    }
+
+    if !(prev_out.script_pubkey.is_p2wsh() || prev_out.script_pubkey.is_p2tr()) {
+        return true;
+    }
+
+    // try parse witness to script
+    let script_instructions = Script::from_bytes(&input.witness[1]).instructions();
+    for instruction in script_instructions {
+        match instruction {
+            Ok(Instruction::Op(opcode)) => {
+                println!("    OP Code: {:?}", opcode);
+                if opcode == OP_CHECKMULTISIG
+                    || opcode == OP_CHECKMULTISIGVERIFY
+                    || opcode == OP_CHECKSIG
+                    || opcode == OP_CHECKSIGVERIFY
+                {
+                    println!("    Witness is valid for P2WSH or P2TR.");
+                    return true;
+                }
+            }
+            Ok(Instruction::PushBytes(_)) => {
+                continue;
+            }
+            Err(e) => {
+                println!("    Error decoding script: {:?}", e);
+            }
+        }
+    }
+
+    false
+}
+
+
 pub fn check_witness(tx: &Transaction, prev_outs: Vec<TxOut>) {
     // parse witness data
     for (i, input) in tx.input.iter().enumerate() {

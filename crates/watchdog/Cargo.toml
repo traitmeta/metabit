@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 tgbot = { path = "../tgbot" }
+bittx = { path = "../bittx" }
 
 anyhow = "1.0"
 bitcoin = "0.32"
