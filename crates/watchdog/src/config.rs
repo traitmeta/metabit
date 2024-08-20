@@ -17,6 +17,9 @@ pub struct Config {
 
 #[derive(Deserialize, Debug)]
 pub struct BitcoinConfig {
+    pub endpoint: String,
+    pub user: String,
+    pub pass: String,
     pub zmq: String,
     pub zmq_port: u16,
 }
@@ -35,7 +38,7 @@ pub fn read_config() -> Config {
     load_config(&args.config)
 }
 
-fn load_config(path: &str) -> Config {
+pub(crate) fn load_config(path: &str) -> Config {
     let config_content = fs::read_to_string(path).expect("Failed to read config file");
     let config: Config = toml::from_str(&config_content).expect("Failed to parse config file");
 
