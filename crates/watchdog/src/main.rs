@@ -5,7 +5,7 @@ use tokio::{
     sync::broadcast,
     time::sleep,
 };
-use tracing::{error, info, warn};
+use tracing::info;
 use tracing_appender::{
     non_blocking::WorkerGuard,
     rolling::{RollingFileAppender, Rotation},
@@ -16,11 +16,7 @@ use tracing_subscriber::{
     util::SubscriberInitExt,
     EnvFilter, Layer, Registry,
 };
-use watchdog::{
-    btcrpc::{self, BtcCli},
-    checker::Checker,
-    config, receiver,
-};
+use watchdog::{btcrpc::BtcCli, checker::sign::SignChecker, config, receiver};
 
 const GRACEFUL_SHUTDOWN_TIMEOUT: u64 = 30;
 
@@ -35,7 +31,7 @@ async fn main() -> Result<()> {
 
     let cfg = config::read_config();
     let btccli = BtcCli::new(&cfg.bitcoin.endpoint, &cfg.bitcoin.user, &cfg.bitcoin.pass);
-    let checker = Checker::new(btccli);
+    let checker = SignChecker::new(btccli);
     let handle = tokio::spawn(async move {
         receiver::receive_rawtx(rx, cfg, &checker).await;
     });

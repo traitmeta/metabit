@@ -1,4 +1,4 @@
-use crate::{checker::Checker, config, lightning};
+use crate::{checker::sign::SignChecker, config, lightning};
 pub use anyhow::Result;
 use bitcoin::{consensus::deserialize, Transaction};
 use std::time::Duration;
@@ -8,7 +8,11 @@ use tracing::{error, info, warn};
 use zmq::Context;
 
 #[tracing::instrument(skip_all)]
-pub async fn receive_rawtx(mut stop_sig: Receiver<bool>, cfg: config::Config, checker: &Checker) {
+pub async fn receive_rawtx(
+    mut stop_sig: Receiver<bool>,
+    cfg: config::Config,
+    checker: &SignChecker,
+) {
     let context = Context::new();
     let subscriber = context.socket(zmq::SUB).unwrap();
     subscriber
@@ -39,7 +43,7 @@ pub async fn receive_rawtx(mut stop_sig: Receiver<bool>, cfg: config::Config, ch
     }
 }
 
-async fn handle_tx(tx: Transaction, bot: &TgBot, checker: &Checker) {
+async fn handle_tx(tx: Transaction, bot: &TgBot, checker: &SignChecker) {
     let txid = tx.compute_txid();
     let mut exist = false;
     let mut input_idx = 0;

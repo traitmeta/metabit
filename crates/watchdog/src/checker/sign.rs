@@ -1,11 +1,4 @@
-use bitcoin::blockdata::opcodes::all::{
-    OP_CHECKMULTISIG, OP_CHECKMULTISIGVERIFY, OP_CHECKSIG, OP_CHECKSIGVERIFY,
-};
-use bitcoin::script::Instruction;
-use bitcoin::{Script, Transaction, TxIn, Txid, Witness};
-use bittx::witness;
-
-use crate::btcrpc;
+use super::*;
 
 pub fn is_multisig_witness(witness: &Witness) -> bool {
     if let Some(redeem_script_bytes) = witness.last() {
@@ -43,13 +36,13 @@ pub fn is_signed_witness(witness: &Witness) -> bool {
     }
 }
 
-pub struct Checker {
+pub struct SignChecker {
     btccli: btcrpc::BtcCli,
 }
 
-impl Checker {
+impl SignChecker {
     pub fn new(btccli: btcrpc::BtcCli) -> Self {
-        Checker { btccli }
+        SignChecker { btccli }
     }
 
     pub fn check_input_sign(&self, input: &TxIn) -> bool {

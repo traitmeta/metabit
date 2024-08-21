@@ -6,7 +6,7 @@ pub struct MultiSig2_2 {
 }
 
 // this is the simple implementation
-pub fn check_lightning_channel_close(tx: Transaction) -> Option<MultiSig2_2> {
+pub fn check_lightning_channel_close(tx: &Transaction) -> Option<MultiSig2_2> {
     if tx.input.len() != 1 {
         return None;
     }
@@ -17,7 +17,7 @@ pub fn check_lightning_channel_close(tx: Transaction) -> Option<MultiSig2_2> {
 
     // must be include two 330 output
     let mut count_of_330 = 0;
-    for out in tx.output {
+    for out in &tx.output {
         if out.value.to_sat() == 330 {
             count_of_330 += 1;
         }
@@ -84,7 +84,7 @@ mod tests {
         let raw_tx = "0200000000010199737cff512e7207367804a536173cfbd11633feac0241283d3e8e8570f558ba0100000000b8e9b080044a010000000000002200202352053e1cd0b5f360d93bd39f324ac81ba82b9028252f2b02e9c468b9ba26f84a010000000000002200207535509faff2b5feb747ab8bb8eb12560c2f151a5ace5fe612526a8ca05f1febfc780200000000002200204ba3a03f6d2977476fa238320b2357d81f62ccba6caa104b456172af526612ca239b030000000000220020733a1726c25def1cb9b994c13f95cbe86d3cc48678edc88267bbba61426b173c040047304402207f3f9115b5484b8ebab72e4771ac8952575bd1ba466430dbe61e9b97429a4f2f022074fd8e526c9d94e5298f705db59b49ff9685ca998cca0687ff4a45db7aad6e4101483045022100cea8fabab14cea2a8d99ba3af21d8fc32d4504caeb7349b1b15a2ddd40febaf602200b197832477e13d669d049a54d4e579c942b4f3947bd01f59b11cece38a9dd9901475221024920e2293b862c6eeae69667af2654d0a31c36b0066a91d9b3a86994d3a910d62103a4a513fb72a6e352f0e42886cfaa7bbb433b690c687e791f718e4818c95210c552ae779bd520";
 
         let tx = deserialize_hex::<Transaction>(&raw_tx).unwrap();
-        let result = check_lightning_channel_close(tx);
+        let result = check_lightning_channel_close(&tx);
 
         assert!(result.is_some());
         let multisig2_2 = result.unwrap();
