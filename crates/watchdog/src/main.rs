@@ -16,7 +16,8 @@ use tracing_subscriber::{
     util::SubscriberInitExt,
     EnvFilter, Layer, Registry,
 };
-use watchdog::{btcrpc::BtcCli, checker::sign::SignChecker, config, receiver};
+use watchdog::{config, receiver::TxReceiver};
+use zmq::Context;
 
 const GRACEFUL_SHUTDOWN_TIMEOUT: u64 = 30;
 
@@ -28,20 +29,29 @@ async fn main() -> Result<()> {
     let (tx, rx) = broadcast::channel(1);
     let mut sigterm = signal(SignalKind::terminate())?;
     let mut sigint = signal(SignalKind::interrupt())?;
-
     let cfg = config::read_config();
-    let btccli = BtcCli::new(&cfg.bitcoin.endpoint, &cfg.bitcoin.user, &cfg.bitcoin.pass);
-    let checker = SignChecker::new(btccli);
-    let handle = tokio::spawn(async move {
-        receiver::receive_rawtx(rx, cfg, &checker).await;
-    });
+    let context = Context::new();
+    let subscriber = context.socket(zmq::SUB).unwrap();
+    let zmq_url = format!("tcp://{}:{}", cfg.bitcoin.zmq, cfg.bitcoin.zmq_port);
+    subscriber.connect(zmq_url.as_str()).unwrap();
+    subscriber.set_subscribe(b"rawtx").unwrap();
+    let tx_receiver = TxReceiver::new(cfg);
 
-    tokio::select! {
-        _ = sigterm.recv() => {
-            info!("Received SIGTERM, shutting down gracefully...");
-        }
-        _ = sigint.recv() => {
-            info!("Received SIGINT, shutting down gracefully...");
+    loop {
+        tokio::select! {
+            _ = sleep(Duration::from_millis(1)) => {
+                let _topic = subscriber.recv_msg(0).unwrap();
+                let tx_data = subscriber.recv_bytes(0).unwrap();
+                tx_receiver.handle_recv(tx_data).await;
+            }
+            _ = sigterm.recv() => {
+                info!("Received SIGTERM, shutting down gracefully...");
+                break
+            }
+            _ = sigint.recv() => {
+                info!("Received SIGINT, shutting down gracefully...");
+                break
+            }
         }
     }
 
@@ -54,7 +64,6 @@ async fn main() -> Result<()> {
         sleep(Duration::from_secs(1)).await;
     }
 
-    handle.await.unwrap();
     if !is_all_request_completed() {
         println!("Graceful shutdown timeout, closing server...");
     }

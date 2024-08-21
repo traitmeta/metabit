@@ -1,3 +1,5 @@
+use tracing::{debug, warn};
+
 use super::*;
 
 pub fn check_witness_with_prev_txs(
@@ -6,11 +8,11 @@ pub fn check_witness_with_prev_txs(
 ) -> Option<Vec<usize>> {
     let mut res = vec![];
     for (i, input) in tx.input.iter().enumerate() {
-        println!("Input index: {}", i);
+        debug!("Input index: {}", i);
         let prev_tx = prev_txs.get(i).unwrap();
         let check_result = check_witness_signed(input, prev_tx);
         if !check_result {
-            println!("    Witness is not valid for input index {}.", i);
+            debug!("    Witness is not valid for input index {}.", i);
             res.push(i);
         }
     }
@@ -40,13 +42,13 @@ pub fn check_witness_signed(input: &TxIn, prev_tx: &Transaction) -> bool {
     for instruction in script_instructions {
         match instruction {
             Ok(Instruction::Op(opcode)) => {
-                println!("    OP Code: {:?}", opcode);
+                debug!("    OP Code: {:?}", opcode);
                 if opcode == OP_CHECKMULTISIG
                     || opcode == OP_CHECKMULTISIGVERIFY
                     || opcode == OP_CHECKSIG
                     || opcode == OP_CHECKSIGVERIFY
                 {
-                    println!("    Witness is valid for P2WSH or P2TR.");
+                    debug!("    Witness is valid for P2WSH or P2TR.");
                     return true;
                 }
             }
@@ -54,7 +56,7 @@ pub fn check_witness_signed(input: &TxIn, prev_tx: &Transaction) -> bool {
                 continue;
             }
             Err(e) => {
-                println!("    Error decoding script: {:?}", e);
+                warn!("    Error decoding script: {:?}", e);
             }
         }
     }
@@ -72,17 +74,18 @@ pub fn check_input_signed(input: &TxIn, prev_out: &TxOut) -> bool {
     }
 
     // try parse witness to script
-    let script_instructions = Script::from_bytes(&input.witness[1]).instructions();
+    let script_witness = input.witness.last().unwrap();
+    let script_instructions = Script::from_bytes(script_witness).instructions();
     for instruction in script_instructions {
         match instruction {
             Ok(Instruction::Op(opcode)) => {
-                println!("    OP Code: {:?}", opcode);
+                debug!("    OP Code: {:?}", opcode);
                 if opcode == OP_CHECKMULTISIG
                     || opcode == OP_CHECKMULTISIGVERIFY
                     || opcode == OP_CHECKSIG
                     || opcode == OP_CHECKSIGVERIFY
                 {
-                    println!("    Witness is valid for P2WSH or P2TR.");
+                    debug!("    Witness is valid for P2WSH or P2TR.");
                     return true;
                 }
             }
@@ -90,7 +93,7 @@ pub fn check_input_signed(input: &TxIn, prev_out: &TxOut) -> bool {
                 continue;
             }
             Err(e) => {
-                println!("    Error decoding script: {:?}", e);
+                debug!("    Error decoding script: {:?}", e);
             }
         }
     }
@@ -98,11 +101,10 @@ pub fn check_input_signed(input: &TxIn, prev_out: &TxOut) -> bool {
     false
 }
 
-
 pub fn check_witness(tx: &Transaction, prev_outs: Vec<TxOut>) {
     // parse witness data
     for (i, input) in tx.input.iter().enumerate() {
-        println!("Input index: {}", i);
+        info!("Input index: {}", i);
         if input.witness.len() <= 1 {
             continue;
         }
