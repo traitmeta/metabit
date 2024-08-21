@@ -1,7 +1,4 @@
 use super::*;
-use bitcoin::opcodes::all::{
-    OP_CHECKMULTISIG, OP_CHECKMULTISIGVERIFY, OP_CHECKSIG, OP_CHECKSIGVERIFY,
-};
 
 pub fn check_witness_with_prev_txs(
     tx: &Transaction,
