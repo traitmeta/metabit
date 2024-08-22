@@ -8,27 +8,10 @@ use super::*;
 
 /// need a UTXO which will be added
 pub fn build_lightning_anchor_tx(
-    adder_utxos: types::Utxo,
+    adder_utxos: &types::Utxo,
     anchor_utxos: Vec<types::Utxo>,
     input_payloads: Vec<Vec<u8>>,
 ) -> (Transaction, Vec<TxOut>) {
-    let mut inputs = vec![];
-    let txin: types::Utxo = types::Utxo {
-        out_point: adder_utxos.out_point,
-        script_pubkey: adder_utxos.script_pubkey.clone(),
-        value: adder_utxos.value,
-    };
-    inputs.push(txin);
-
-    for utxo in anchor_utxos.iter() {
-        let txin = types::Utxo {
-            out_point: utxo.out_point,
-            script_pubkey: utxo.script_pubkey.clone(),
-            value: utxo.value,
-        };
-        inputs.push(txin);
-    }
-
     let recipient_amount = Amount::from_sat(adder_utxos.value.to_sat() + 100);
     // 创建交易输出
     let receiver_out = TxOut {
@@ -38,10 +21,10 @@ pub fn build_lightning_anchor_tx(
 
     let outputs: Vec<TxOut> = vec![receiver_out];
     let (witness_inputs, prev_fetcher) =
-        build_anchor_input_and_prev_fetch(&adder_utxos, inputs, input_payloads);
+        build_anchor_input_and_prev_fetch(&adder_utxos, anchor_utxos, input_payloads);
     let tx = Transaction {
         version: Version::TWO,
-        lock_time: LockTime::from_time(0).unwrap(),
+        lock_time: LockTime::ZERO,
         input: witness_inputs,
         output: outputs,
     };

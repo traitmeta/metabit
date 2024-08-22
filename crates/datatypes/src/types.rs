@@ -1,4 +1,4 @@
-use bitcoin::{Amount, OutPoint, ScriptBuf};
+use bitcoin::{Amount, OutPoint, ScriptBuf, TxOut};
 
 #[derive(Default, Debug)]
 pub struct Utxo {
@@ -12,4 +12,11 @@ pub struct TransferInfo {
     pub recipient: String,
     pub amount: u64,
     pub feerate: f32,
+}
+
+pub struct AnchorInfo {
+    pub anchor_txid: String,
+    pub unlock_bytes: Vec<Vec<u8>>,
+    pub unlock_outs: Vec<TxOut>,
+    pub recipient: String,
 }
