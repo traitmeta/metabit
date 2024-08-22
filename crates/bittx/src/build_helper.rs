@@ -1,10 +1,12 @@
+use builder::base;
+
 use super::*;
 
 pub async fn build_transer_tx(info: types::TransferInfo) -> Result<(Transaction, Vec<TxOut>)> {
     let utxos = utxo::gets_uspent_utxo(&info.sender).await?;
 
     // 创建交易对象
-    let tx = builder::build_transfer_tx(
+    let tx = base::build_transfer_tx(
         &info.sender,
         &info.recipient,
         info.amount,

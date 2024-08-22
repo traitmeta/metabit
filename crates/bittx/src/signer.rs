@@ -11,12 +11,12 @@ use bitcoin::{TapLeafHash, TapSighash, TapSighashType};
 use secp256k1::{scalar, Keypair, PublicKey, Secp256k1, SecretKey};
 
 pub async fn sign_tx(
+    wif: String,
     tx: Transaction,
     prevouts: Vec<TxOut>,
     sign_idx: Vec<usize>,
 ) -> Result<Vec<u8>> {
-    let private_key = PrivateKey::from_wif("your_private_key_wif").unwrap();
-
+    let private_key = PrivateKey::from_wif(wif.as_str()).unwrap();
     let mut tx = tx;
     for idx in sign_idx.iter() {
         sign_taproot_key_spend(private_key, &mut tx, &prevouts, *idx);
