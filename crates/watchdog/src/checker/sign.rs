@@ -48,11 +48,14 @@ impl SignChecker {
     pub fn check_input_sign(&self, input: &TxIn) -> bool {
         let prev_out = self
             .btccli
-            .get_tx_out(&input.previous_output.txid, input.previous_output.vout)
-            .unwrap();
-        let signed = witness::check_input_signed(input, &prev_out);
-
-        signed
+            .get_tx_out(&input.previous_output.txid, input.previous_output.vout);
+        match prev_out {
+            Ok(out) => witness::check_input_signed(input, &out),
+            Err(e) => {
+                error!("get tx output from node failed : {}", e);
+                return false;
+            }
+        }
     }
 
     pub fn check_sign(&self, tx: Transaction) -> Option<Vec<usize>> {

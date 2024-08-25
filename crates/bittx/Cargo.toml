@@ -2,6 +2,8 @@
 name = "bittx"
 version = "0.1.0"
 edition = "2021"
+description = "A tool for someone what build bitcoin transaction."
+license = "MIT"
 
 [dependencies]
 datatypes = { path = "../datatypes" }
