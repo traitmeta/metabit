@@ -1,7 +1,5 @@
 use super::*;
-use bitcoin::{TxOut, Txid};
 use bitcoincore_rpc::{Auth, Client, RpcApi};
-use tracing::debug;
 
 pub struct BtcCli {
     rpc: Client,

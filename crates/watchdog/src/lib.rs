@@ -6,9 +6,14 @@ pub mod receiver;
 pub mod sender;
 
 use anyhow::{anyhow, Result};
-use bitcoin::{consensus::deserialize, Transaction};
+use bitcoin::blockdata::opcodes::all::{
+    OP_CHECKMULTISIG, OP_CHECKMULTISIGVERIFY, OP_CHECKSIG, OP_CHECKSIGVERIFY,
+};
+use bitcoin::script::Instruction;
+use bitcoin::{consensus::deserialize, Script, Transaction, TxIn, TxOut, Txid, Witness};
+use bittx::witness;
 use std::{sync::Arc, time::Duration};
 use tgbot::TgBot;
 use tokio::{sync::broadcast::Receiver, time::sleep};
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 use zmq::{Context, Socket};

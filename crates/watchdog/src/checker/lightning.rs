@@ -1,4 +1,4 @@
-use bittx::lightning::MultiSig2_2;
+use datatypes::types::AnchorUnlockInfo;
 
 use super::*;
 
@@ -9,7 +9,7 @@ impl LightningChecker {
         LightningChecker {}
     }
 
-    pub fn check_input_sign(&self, tx: &Transaction) -> Option<MultiSig2_2> {
+    pub fn check_input_sign(&self, tx: &Transaction) -> Option<AnchorUnlockInfo> {
         bittx::lightning::check_lightning_channel_close(tx)
     }
 }

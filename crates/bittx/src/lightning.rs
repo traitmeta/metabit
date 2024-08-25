@@ -1,12 +1,7 @@
 use super::*;
 
-pub struct MultiSig2_2 {
-    pub unlock1_bytes: Vec<u8>,
-    pub unlock2_bytes: Vec<u8>,
-}
-
 // this is the simple implementation
-pub fn check_lightning_channel_close(tx: &Transaction) -> Option<MultiSig2_2> {
+pub fn check_lightning_channel_close(tx: &Transaction) -> Option<types::AnchorUnlockInfo> {
     if tx.input.len() != 1 {
         return None;
     }
@@ -32,7 +27,7 @@ pub fn check_lightning_channel_close(tx: &Transaction) -> Option<MultiSig2_2> {
 }
 
 // 2 <pubkey1> <pubkey2> 2 OP_CHECKMULTISIG
-pub fn is_multisig_2_of_2(witness: &Witness) -> Option<MultiSig2_2> {
+pub fn is_multisig_2_of_2(witness: &Witness) -> Option<types::AnchorUnlockInfo> {
     // witness[0] = empty（CHECKMULTISIG required bug fix value）
     // witness[1] and  witness[2] should be two public key
     // witness[3]  =  2 <pubkey1> <pubkey2> 2 OP_CHECKMULTISIG
@@ -62,9 +57,9 @@ pub fn is_multisig_2_of_2(witness: &Witness) -> Option<MultiSig2_2> {
                 Some(Ok(Instruction::Op(OP_CHECKMULTISIG))),
             ) = (iter.next(), iter.next())
             {
-                return Some(MultiSig2_2 {
-                    unlock1_bytes: unlock1_bytes.as_bytes().to_vec(),
-                    unlock2_bytes: unlock2_bytes.as_bytes().to_vec(),
+                return Some(types::AnchorUnlockInfo {
+                    unlock1: unlock1_bytes.as_bytes().to_vec(),
+                    unlock2: unlock2_bytes.as_bytes().to_vec(),
                 });
             }
         }
@@ -87,13 +82,13 @@ mod tests {
         let result = check_lightning_channel_close(&tx);
 
         assert!(result.is_some());
-        let multisig2_2 = result.unwrap();
+        let unlock_info: types::AnchorUnlockInfo = result.unwrap();
         assert_eq!(
-            hex::encode(multisig2_2.unlock1_bytes),
+            hex::encode(unlock_info.unlock1),
             "024920e2293b862c6eeae69667af2654d0a31c36b0066a91d9b3a86994d3a910d6"
         );
         assert_eq!(
-            hex::encode(multisig2_2.unlock2_bytes),
+            hex::encode(unlock_info.unlock2),
             "03a4a513fb72a6e352f0e42886cfaa7bbb433b690c687e791f718e4818c95210c5"
         );
     }

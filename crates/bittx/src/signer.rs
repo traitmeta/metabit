@@ -15,19 +15,15 @@ pub async fn sign_tx(
     tx: Transaction,
     prevouts: Vec<TxOut>,
     sign_idx: Vec<usize>,
-) -> Result<Vec<u8>> {
+) -> Result<Transaction> {
     let private_key = PrivateKey::from_wif(wif.as_str()).unwrap();
     let mut tx = tx;
     for idx in sign_idx.iter() {
         sign_taproot_key_spend(private_key, &mut tx, &prevouts, *idx);
     }
 
-    let raw_tx = serialize(&tx);
     info!("{}", serialize_hex(&tx));
-
-    // let txid = client.send_raw_transaction(&raw_tx).unwrap();
-    // println!("Transaction broadcasted with txid: {}", txid);
-    Ok(raw_tx)
+    Ok(tx)
 }
 
 pub fn sign_taproot(

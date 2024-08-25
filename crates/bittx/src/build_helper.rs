@@ -48,8 +48,10 @@ pub async fn build_anchor_tx(info: types::AnchorInfo) -> Result<(Transaction, Ve
     }
 
     let my_utxo = utxos.get(0).unwrap();
-    let tx = anchor::build_lightning_anchor_tx(my_utxo, anchor_utxos, info.unlock_bytes);
-    Ok(tx)
+    let (tx, prev_outs) =
+        anchor::build_lightning_anchor_tx(my_utxo, anchor_utxos, info.unlock_bytes);
+
+    Ok((tx, prev_outs))
 
     // 签名交易
     // let sighash = tx.signature_hash(
@@ -85,7 +87,7 @@ mod tests {
         let unlock_info = check_lightning_channel_close(&tx).unwrap();
         let data = types::AnchorInfo {
             anchor_txid: tx.compute_txid().to_string(),
-            unlock_bytes: vec![unlock_info.unlock1_bytes, unlock_info.unlock2_bytes],
+            unlock_bytes: vec![unlock_info.unlock1, unlock_info.unlock2],
             unlock_outs: vec![
                 tx.output.get(0).unwrap().clone(),
                 tx.output.get(1).unwrap().clone(),

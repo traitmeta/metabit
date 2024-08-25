@@ -20,3 +20,8 @@ pub struct AnchorInfo {
     pub unlock_outs: Vec<TxOut>,
     pub recipient: String,
 }
+
+pub struct AnchorUnlockInfo {
+    pub unlock1: Vec<u8>,
+    pub unlock2: Vec<u8>,
+}

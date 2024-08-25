@@ -264,8 +264,8 @@ async fn handle_tx_lightning(tx: Transaction, bot: Arc<TgBot>, checker: Arc<Ligh
         "Lightning channel close, txid:{}, idx:{}, unlock_script_1: {}, unlock_script_2: {}",
         txid.to_string(),
         input_idx,
-        hex::encode(multisig.unlock1_bytes),
-        hex::encode(multisig.unlock2_bytes),
+        hex::encode(multisig.unlock1),
+        hex::encode(multisig.unlock2),
     );
     match bot.send_msg_to_topic(msg.as_str()).await {
         Ok(_) => {}

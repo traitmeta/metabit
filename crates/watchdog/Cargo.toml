@@ -5,6 +5,7 @@ version = "0.1.0"
 
 [dependencies]
 bittx = {path = "../bittx"}
+datatypes = {path = "../datatypes"}
 tgbot = {path = "../tgbot"}
 
 anyhow = "1.0"
