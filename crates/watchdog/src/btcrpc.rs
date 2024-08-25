@@ -1,4 +1,5 @@
 use super::*;
+use bitcoin::{block, Block};
 use bitcoincore_rpc::{Auth, Client, RpcApi};
 
 pub struct BtcCli {
@@ -10,6 +11,16 @@ impl BtcCli {
         let rpc: Client =
             Client::new(url, Auth::UserPass(user.to_string(), pass.to_string())).unwrap();
         Self { rpc }
+    }
+
+    pub fn get_block(&self, height: u64) -> Result<Block> {
+        let block_hash = self.rpc.get_block_hash(height).unwrap();
+        match self.rpc.get_block(&block_hash) {
+            Ok(block) => {
+                return Ok(block);
+            }
+            Err(e) => Err(anyhow!("Failed to fetch block: {:?}", e)),
+        }
     }
 
     pub fn get_unsepnt_tx_out(&self, txid: &bitcoin::Txid, vout: u32) {
