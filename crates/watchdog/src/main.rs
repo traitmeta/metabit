@@ -5,7 +5,7 @@ use tokio::{
     sync::broadcast,
     time::sleep,
 };
-use tracing::info;
+use tracing::{debug, info};
 use tracing_appender::{
     non_blocking::WorkerGuard,
     rolling::{RollingFileAppender, Rotation},
@@ -37,10 +37,20 @@ async fn main() -> Result<()> {
     subscriber.set_subscribe(b"rawtx").unwrap();
     let tx_receiver = TxReceiver::new(cfg);
 
+    info!("Start watchdog...");
     loop {
         tokio::select! {
             _ = sleep(Duration::from_millis(1)) => {
-                let _topic = subscriber.recv_msg(0).unwrap();
+                let topic = subscriber.recv_msg(0).unwrap();
+                debug!("Received topic : {:?}",topic.as_str());
+                if topic.as_str().is_none(){
+                    continue
+                }
+
+                if topic.as_str().unwrap() != "rawtx"{
+                    continue
+                }
+
                 let tx_data = subscriber.recv_bytes(0).unwrap();
                 tx_receiver.handle_recv(tx_data).await;
             }
@@ -65,8 +75,10 @@ async fn main() -> Result<()> {
     }
 
     if !is_all_request_completed() {
-        println!("Graceful shutdown timeout, closing server...");
+        info!("Graceful shutdown timeout, closing server...");
     }
+
+    info!("Close watchdog...");
 
     Ok(())
 }
@@ -77,8 +89,9 @@ fn logger_init() -> WorkerGuard {
     let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
     let file_layer = fmt::layer()
         .with_ansi(false)
-        .with_writer(non_blocking.and(std::io::stdout))
-        .with_filter(tracing_subscriber::filter::LevelFilter::INFO)
+        .with_writer(non_blocking)
+        // .with_writer(non_blocking.and(std::io::stdout))
+        .with_filter(tracing_subscriber::filter::LevelFilter::DEBUG)
         .boxed();
 
     Registry::default()

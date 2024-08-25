@@ -1,6 +1,7 @@
 use super::*;
 use bitcoin::TxOut;
 use bitcoincore_rpc::{Auth, Client, RpcApi};
+use tracing::debug;
 
 pub struct BtcCli {
     rpc: Client,
@@ -33,12 +34,11 @@ impl BtcCli {
                 let tx: bitcoin::Transaction = raw_tx;
                 let tx_out = &tx.output[vout as usize];
 
-                println!("TxOut value: {}", tx_out.value);
-                println!("TxOut script_pubkey: {}", tx_out.script_pubkey);
+                debug!("TxOut value: {}", tx_out.value);
+                debug!("TxOut script_pubkey: {}", tx_out.script_pubkey);
                 Ok(tx_out.clone())
             }
             Err(e) => {
-                eprintln!("Error fetching raw transaction: {:?}", e);
                 Err(anyhow!("Error fetching raw transaction"))
             }
         }

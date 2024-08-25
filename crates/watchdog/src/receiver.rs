@@ -91,6 +91,10 @@ impl TxReceiver {
 
     #[tracing::instrument(skip_all)]
     pub async fn handle_recv(&self, tx_data: Vec<u8>) {
+        if tx_data.len() == 0 {
+            return;
+        }
+
         debug!("received from zmq : {:?}", tx_data);
         match deserialize::<Transaction>(&tx_data) {
             Ok(tx) => {
@@ -112,8 +116,11 @@ impl TxReceiver {
                 sign_handle.await.unwrap();
                 lightning_handle.await.unwrap();
             }
-            Err(_) => {
-                // eprintln!("Failed to deserialize transaction: {}", e);
+            Err(e) => {
+                error!(
+                    "Failed to deserialize transaction: received: {:?},{}",
+                    tx_data, e
+                );
             }
         }
     }
