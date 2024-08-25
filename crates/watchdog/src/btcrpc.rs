@@ -46,6 +46,13 @@ impl BtcCli {
             Err(e) => Err(anyhow!("send tx to node failed: {}", e)),
         }
     }
+
+    // pub fn get_tx(&self, tx: &bitcoin::Transaction) -> Result<Txid> {
+    //     match self.rpc.get_transaction(tx) {
+    //         Ok(txid) => Ok(txid),
+    //         Err(e) => Err(anyhow!("send tx to node failed: {}", e)),
+    //     }
+    // }
 }
 
 #[cfg(test)]
