@@ -1,5 +1,5 @@
 use super::*;
-use bitcoin::TxOut;
+use bitcoin::{TxOut, Txid};
 use bitcoincore_rpc::{Auth, Client, RpcApi};
 use tracing::debug;
 
@@ -38,9 +38,14 @@ impl BtcCli {
                 debug!("TxOut script_pubkey: {}", tx_out.script_pubkey);
                 Ok(tx_out.clone())
             }
-            Err(e) => {
-                Err(anyhow!("Error fetching raw transaction"))
-            }
+            Err(e) => Err(anyhow!("Error fetching raw transaction: {}", e)),
+        }
+    }
+
+    pub fn send_tx(&self, tx: &bitcoin::Transaction) -> Result<Txid> {
+        match self.rpc.send_raw_transaction(tx) {
+            Ok(txid) => Ok(txid),
+            Err(e) => Err(anyhow!("send tx to node failed: {}", e)),
         }
     }
 }
