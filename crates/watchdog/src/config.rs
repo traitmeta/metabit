@@ -13,6 +13,7 @@ struct Cli {
 pub struct Config {
     pub bitcoin: BitcoinConfig,
     pub tgbot: TgBot,
+    pub sign: SignConfig,
 }
 
 #[derive(Deserialize, Debug)]
@@ -31,6 +32,12 @@ pub struct TgBot {
     pub sold_topic_id: i32,
     pub sniper_topic_id: i32,
     pub tx_topic_id: i32,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct SignConfig {
+    pub wif: String,
+    pub receiver: String,
 }
 
 pub fn read_config() -> Config {

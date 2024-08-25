@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use super::*;
+use bitcoin::{Address, Network};
 use datatypes::types;
 
 #[derive(Debug, Deserialize)]
@@ -26,7 +27,10 @@ pub async fn gets_uspent_utxo(addr: &str) -> Result<Vec<types::Utxo>> {
 async fn gets_utxo(addr: &str, confirmed: bool) -> Result<Vec<types::Utxo>> {
     let url = format!("{}/api/address/{}/utxo", MEMPOOL_URL, addr);
     debug!("{}", url);
-
+    let address = Address::from_str(&addr)
+        .unwrap()
+        .require_network(Network::Bitcoin)
+        .unwrap();
     // 发起GET请求
     let response = reqwest::get(url).await?;
 
@@ -40,7 +44,7 @@ async fn gets_utxo(addr: &str, confirmed: bool) -> Result<Vec<types::Utxo>> {
         let my_utxo = types::Utxo {
             out_point: OutPoint::from_str(&format!("{}:{}", utxo.txid, utxo.vout)).unwrap(),
             value: Amount::from_sat(utxo.value),
-            script_pubkey: ScriptBuf::new(),
+            script_pubkey: address.script_pubkey().clone(),
         };
         if confirmed {
             if utxo.status.confirmed {

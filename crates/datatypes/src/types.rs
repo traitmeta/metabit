@@ -21,6 +21,7 @@ pub struct AnchorInfo {
     pub recipient: String,
 }
 
+#[derive(Clone)]
 pub struct AnchorUnlockInfo {
     pub unlock1: Vec<u8>,
     pub unlock2: Vec<u8>,
