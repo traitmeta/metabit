@@ -71,6 +71,6 @@ mod tests {
         let addr = "bc1qdx5yz3j59mgk6tfcedcn0ekud4exlg88s893j8";
         let utxos = gets_uspent_utxo(addr).await.unwrap();
         assert!(!utxos.is_empty());
-        info!("{:?}", utxos);
+        println!("{:?}", utxos);
     }
 }

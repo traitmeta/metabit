@@ -1,5 +1,5 @@
 use super::*;
-use bitcoin::{block, Block};
+use bitcoin::Block;
 use bitcoincore_rpc::{Auth, Client, RpcApi};
 
 pub struct BtcCli {

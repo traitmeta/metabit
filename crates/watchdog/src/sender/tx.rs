@@ -60,16 +60,10 @@ impl TxSender {
 
 #[cfg(test)]
 mod tests {
-    use bitcoin::{
-        consensus::encode::{deserialize_hex, serialize_hex},
-        Transaction,
-    };
-    use bittx::{build_helper::build_anchor_tx, lightning::check_lightning_channel_close};
-    use datatypes::types;
-
+    use super::TxSender;
     use crate::{btcrpc::BtcCli, config};
-
-    use super::{btcrpc, receiver, TxSender};
+    use bitcoin::{consensus::encode::deserialize_hex, Transaction};
+    use bittx::lightning::check_lightning_channel_close;
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn test_anchor_send() {

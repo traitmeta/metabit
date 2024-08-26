@@ -1,9 +1,9 @@
 pub mod utxo;
 
 use anyhow::Result;
-use bitcoin::{Amount, OutPoint, ScriptBuf};
+use bitcoin::{Amount, OutPoint};
 use serde::Deserialize;
-use tracing::{debug, info};
+use tracing::debug;
 
 const MEMPOOL_URL: &str = "https://mempool.space";
 

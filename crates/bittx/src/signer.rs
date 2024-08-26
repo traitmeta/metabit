@@ -1,14 +1,11 @@
 use super::*;
 use bitcoin::sighash::SighashCache;
-use bitcoin::taproot::{ControlBlock, LeafVersion, TaprootBuilder, TaprootSpendInfo};
+use bitcoin::taproot::LeafVersion;
 use bitcoin::{
-    consensus::{encode::serialize_hex, serialize},
-    sighash::Prevouts,
-    taproot::Signature,
-    PrivateKey,
+    consensus::encode::serialize_hex, sighash::Prevouts, taproot::Signature, PrivateKey,
 };
 use bitcoin::{TapLeafHash, TapSighash, TapSighashType};
-use secp256k1::{scalar, Keypair, PublicKey, Secp256k1, SecretKey};
+use secp256k1::{Keypair, Secp256k1};
 
 pub async fn sign_tx(
     wif: String,

@@ -1,10 +1,5 @@
-use bitcoin::{
-    opcodes::all::{OP_CSV, OP_ENDIF, OP_IFDUP, OP_NOTIF, OP_PUSHBYTES_33, OP_PUSHNUM_16},
-    script::Builder,
-};
-use std::vec;
-
 use super::*;
+use std::vec;
 
 pub fn build_transfer_tx(
     sender: &str,

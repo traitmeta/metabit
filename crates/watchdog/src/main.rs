@@ -26,7 +26,7 @@ async fn main() -> Result<()> {
     // TIPS: guard must have same long lifetime with main
     let _guard = logger_init();
 
-    let (tx, rx) = broadcast::channel(1);
+    let (tx, _rx) = broadcast::channel(1);
     let mut sigterm = signal(SignalKind::terminate())?;
     let mut sigint = signal(SignalKind::interrupt())?;
     let cfg = config::read_config();
@@ -104,6 +104,5 @@ fn logger_init() -> WorkerGuard {
 }
 
 fn is_all_request_completed() -> bool {
-    // 判断是否所有请求都已经处理完成
     true
 }
