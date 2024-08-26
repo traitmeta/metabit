@@ -3,6 +3,7 @@ pub mod checker;
 pub mod config;
 pub mod lightning;
 pub mod receiver;
+pub mod repo;
 pub mod sender;
 
 use anyhow::{anyhow, Result};

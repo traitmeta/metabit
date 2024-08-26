@@ -92,7 +92,7 @@ mod tests {
                 tx.output.get(0).unwrap().clone(),
                 tx.output.get(1).unwrap().clone(),
             ],
-            recipient: "bc1pc9vyrh884zxtlxr2lz56cs7fpg4ssy3k6n9m9xgtal25dg370e2q23cndf".to_string(),
+            recipient: "bc1pdwy6qmwjhfng95v96avuer8za40vy7f66u5cphn9e09dzr6eemfstalyac".to_string(),
         };
 
         let res = build_anchor_tx(data).await;

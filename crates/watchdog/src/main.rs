@@ -11,7 +11,7 @@ use tracing_appender::{
     rolling::{RollingFileAppender, Rotation},
 };
 use tracing_subscriber::{
-    fmt::{self, writer::MakeWriterExt},
+    fmt::{self},
     layer::SubscriberExt,
     util::SubscriberInitExt,
     EnvFilter, Layer, Registry,
@@ -35,7 +35,7 @@ async fn main() -> Result<()> {
     let zmq_url = format!("tcp://{}:{}", cfg.bitcoin.zmq, cfg.bitcoin.zmq_port);
     subscriber.connect(zmq_url.as_str()).unwrap();
     subscriber.set_subscribe(b"rawtx").unwrap();
-    let tx_receiver = TxReceiver::new(cfg);
+    let tx_receiver = TxReceiver::new(cfg).await;
 
     info!("Start watchdog...");
     loop {

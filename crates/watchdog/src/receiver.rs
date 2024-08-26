@@ -1,3 +1,4 @@
+use repo::Dao;
 use tracing::debug;
 
 use super::*;
@@ -12,19 +13,22 @@ pub struct TxReceiver {
     bot: Arc<TgBot>,
     sign_checker: Arc<SignChecker>,
     lightning_checker: Arc<LightningChecker>,
+    dao: Arc<repo::Dao>,
 }
 
 impl TxReceiver {
-    pub fn new(cfg: config::Config) -> Self {
+    pub async fn new(cfg: config::Config) -> Self {
         let bot = TgBot::new(&cfg.tgbot.token, cfg.tgbot.chat_id, cfg.tgbot.tx_topic_id);
         let btccli = BtcCli::new(&cfg.bitcoin.endpoint, &cfg.bitcoin.user, &cfg.bitcoin.pass);
         let sign_checker = SignChecker::new(btccli);
         let lightning_checker = LightningChecker::new();
+        let conn_pool = repo::conn_pool(cfg.database).await.unwrap();
+        let dao = Dao::new(conn_pool);
         Self {
-            // subscriber,
             bot: Arc::new(bot),
             sign_checker: Arc::new(sign_checker),
             lightning_checker: Arc::new(lightning_checker),
+            dao: Arc::new(dao),
         }
     }
     // pub fn new(cfg: config::Config) -> Self {
@@ -73,8 +77,9 @@ impl TxReceiver {
                             let my_lightning_checker = self.lightning_checker.clone();
                             let tx2 = tx.clone();
                             let my_bot2 = self.bot.clone();
+                            let dao = self.dao.clone();
                             let lightning_handle = tokio::spawn(async {
-                                handle_tx_lightning(tx2, my_bot2,my_lightning_checker).await;
+                                handle_tx_lightning(tx2, my_bot2,my_lightning_checker,dao).await;
                             });
 
                             sign_handle.await.unwrap();
@@ -109,8 +114,9 @@ impl TxReceiver {
                 let my_lightning_checker = self.lightning_checker.clone();
                 let tx2 = tx.clone();
                 let my_bot2 = self.bot.clone();
+                let dao = self.dao.clone();
                 let lightning_handle = tokio::spawn(async {
-                    handle_tx_lightning(tx2, my_bot2, my_lightning_checker).await;
+                    handle_tx_lightning(tx2, my_bot2, my_lightning_checker, dao).await;
                 });
 
                 sign_handle.await.unwrap();
@@ -246,26 +252,32 @@ async fn handle_tx_thread(tx: Transaction, bot: Arc<TgBot>, checker: Arc<SignChe
     }
 }
 
-async fn handle_tx_lightning(tx: Transaction, bot: Arc<TgBot>, checker: Arc<LightningChecker>) {
+async fn handle_tx_lightning(
+    tx: Transaction,
+    bot: Arc<TgBot>,
+    checker: Arc<LightningChecker>,
+    dao: Arc<Dao>,
+) {
     let txid = tx.compute_txid();
     let input_idx = 0;
-    let lightning_info = checker.check_input_sign(&tx);
+    let lightning_info = checker.check_anchor(&tx);
     if lightning_info.is_none() {
         return;
     }
+    let infos = lightning_info.unwrap();
 
-    let multisig = lightning_info.unwrap();
+    for info in infos {
+        let _ = dao.insert_anchor_tx_out(info).await;
+    }
 
     info!(
         "Received transaction hash: {}, idx : {}, lightning channel closed",
         txid, input_idx
     );
     let msg = format!(
-        "Lightning channel close, txid:{}, idx:{}, unlock_script_1: {}, unlock_script_2: {}",
+        "Lightning channel close, txid:{}, idx:{}",
         txid.to_string(),
         input_idx,
-        hex::encode(multisig.unlock1),
-        hex::encode(multisig.unlock2),
     );
     match bot.send_msg_to_topic(msg.as_str()).await {
         Ok(_) => {}

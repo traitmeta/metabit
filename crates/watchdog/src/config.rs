@@ -14,7 +14,14 @@ pub struct Config {
     pub bitcoin: BitcoinConfig,
     pub tgbot: TgBot,
     pub sign: SignConfig,
+    pub database: DBConfig,
 }
+
+#[derive(Deserialize, Debug)]
+pub struct DBConfig {
+    pub url: String,
+}
+
 
 #[derive(Deserialize, Debug)]
 pub struct BitcoinConfig {
