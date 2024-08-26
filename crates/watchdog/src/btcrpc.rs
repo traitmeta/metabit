@@ -13,6 +13,15 @@ impl BtcCli {
         Self { rpc }
     }
 
+    pub fn get_best_block_height(&self) -> Result<u64> {
+        match self.rpc.get_block_count() {
+            Ok(height) => {
+                return Ok(height);
+            }
+            Err(e) => Err(anyhow!("Failed to fetch block count: {:?}", e)),
+        }
+    }
+
     pub fn get_block(&self, height: u64) -> Result<Block> {
         let block_hash = self.rpc.get_block_hash(height).unwrap();
         match self.rpc.get_block(&block_hash) {

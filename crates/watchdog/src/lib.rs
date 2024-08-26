@@ -5,6 +5,7 @@ pub mod lightning;
 pub mod receiver;
 pub mod repo;
 pub mod sender;
+pub mod syncer;
 
 use anyhow::{anyhow, Result};
 use bitcoin::blockdata::opcodes::all::{
@@ -18,3 +19,4 @@ use tgbot::TgBot;
 use tokio::{sync::broadcast::Receiver, time::sleep};
 use tracing::{debug, error, info, warn};
 use zmq::{Context, Socket};
+use repo::Dao;

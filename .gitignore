@@ -23,3 +23,5 @@ crates/watchdog/config.toml
 config.toml
 
 logs/*
+
+.env

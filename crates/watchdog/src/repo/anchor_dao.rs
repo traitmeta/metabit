@@ -49,4 +49,17 @@ impl Dao {
 
         Ok(resp_data)
     }
+
+    pub async fn update_anchor_tx_out(&self, block_height: i64, txids: Vec<String>) -> Result<u64> {
+        let rows_affected = sqlx::query!(
+            "UPDATE anchor_tx_out SET confirmed_block_height = $1 WHERE tx_id in ($2)",
+            block_height,
+            txids.join(",")
+        )
+        .execute(&self.pool)
+        .await?
+        .rows_affected();
+
+        Ok(rows_affected)
+    }
 }
