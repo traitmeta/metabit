@@ -28,7 +28,7 @@ impl TxSender {
             anchor_txid: tx.compute_txid().to_string(),
             unlock_bytes: vec![unlock_info.unlock1, unlock_info.unlock2],
             unlock_outs: vec![
-                tx.output.get(0).unwrap().clone(),
+                tx.output.first().unwrap().clone(),
                 tx.output.get(1).unwrap().clone(),
             ],
             recipient: self.receiver.clone(),

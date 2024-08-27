@@ -1,4 +1,7 @@
+use std::str::FromStr;
+
 use repo::indexer::Indexer;
+use sender::tx;
 
 use super::*;
 
@@ -20,7 +23,7 @@ impl Syncer {
             .await
             .unwrap_or(Indexer::default());
         for height in (last_height.height as u64 + 1)..=tip_height {
-            match self.btccli.get_block(height as u64) {
+            match self.btccli.get_block(height) {
                 Ok(block) => {
                     // TODO some logic here
                     // 1. update the spent or block height for anchor tx
@@ -35,7 +38,6 @@ impl Syncer {
                     }
 
                     // 2. update anchor out spent
-                    
 
                     // 3. update anchor tx confirmed
 
@@ -55,5 +57,77 @@ impl Syncer {
         }
 
         Ok(())
+    }
+
+    // TODO feerate < 1 set confirmed to -1
+    pub async fn sync_anchor(&self) -> Result<()> {
+        let tx_outs = self.dao.get_unpent_comfiremd_anchor_tx_out().await.unwrap();
+        for out in tx_outs.iter() {
+            let txid = Txid::from_str(out.tx_id.as_str()).unwrap();
+            match self.btccli.get_raw_transaction_info(&txid) {
+                Ok((raw_tx, _)) => {
+                    if let Some(blockhash) = raw_tx.blockhash {
+                        if let Ok(block) = self.btccli.get_block_by_hash(blockhash) {
+                            match self
+                                .dao
+                                .update_anchor_tx_confirmed_height(
+                                    block.bip34_block_height().unwrap() as i64,
+                                    raw_tx.txid.to_string(),
+                                )
+                                .await
+                            {
+                                Ok(_) => {}
+                                Err(e) => {
+                                    error!("update_anchor_tx_confirmed_height failed : {}", e)
+                                }
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    error!("get tx out {} vout {} failed : {}", txid, out.vout, e);
+                }
+            }
+
+            match self.btccli.get_tx_out_spent(&txid, out.vout as u32) {
+                Ok(spent) => {
+                    if spent {
+                        match self
+                            .dao
+                            .update_anchor_tx_out_spent(out.tx_id.clone(), out.vout)
+                            .await
+                        {
+                            Ok(_) => {}
+                            Err(e) => {
+                                error!("update_anchor_tx_out_spent failed : {}", e)
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    error!("get tx out {} vout {} failed : {}", txid, out.vout, e);
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use btcrpc::BtcCli;
+
+    use super::*;
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn test_sync_anchor() {
+        let cfg = config::load_config("./config.toml");
+        let btc_cli = BtcCli::new(&cfg.bitcoin.endpoint, &cfg.bitcoin.user, &cfg.bitcoin.pass);
+        let conn_pool = repo::conn_pool(cfg.database).await.unwrap();
+        let dao = Arc::new(Dao::new(conn_pool));
+        let syncer = Syncer::new(btc_cli, dao.clone());
+        let res = syncer.sync_anchor().await;
+        assert!(res.is_ok());
     }
 }

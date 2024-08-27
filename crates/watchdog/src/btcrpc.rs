@@ -1,6 +1,6 @@
 use super::*;
-use bitcoin::Block;
-use bitcoincore_rpc::{Auth, Client, RpcApi};
+use bitcoin::{Block, BlockHash};
+use bitcoincore_rpc::{json::GetRawTransactionResult, Auth, Client, RpcApi};
 
 pub struct BtcCli {
     rpc: Client,
@@ -32,6 +32,15 @@ impl BtcCli {
         }
     }
 
+    pub fn get_block_by_hash(&self, block_hash: BlockHash) -> Result<Block> {
+        match self.rpc.get_block(&block_hash) {
+            Ok(block) => {
+                return Ok(block);
+            }
+            Err(e) => Err(anyhow!("Failed to fetch block: {:?}", e)),
+        }
+    }
+
     pub fn get_unsepnt_tx_out(&self, txid: &bitcoin::Txid, vout: u32) {
         match self.rpc.get_tx_out(txid, vout, Some(true)) {
             Ok(Some(txout)) => {
@@ -46,6 +55,19 @@ impl BtcCli {
         }
     }
 
+    pub fn get_raw_transaction_info(
+        &self,
+        txid: &bitcoin::Txid,
+    ) -> Result<(GetRawTransactionResult, Transaction)> {
+        match self.rpc.get_raw_transaction_info(&txid, None) {
+            Ok(raw_tx) => match raw_tx.transaction() {
+                Ok(tx) => Ok((raw_tx.clone(), tx.clone())),
+                Err(e) => Err(anyhow!("Error convert raw tx to tx: {}", e)),
+            },
+            Err(e) => Err(anyhow!("Error fetching raw transaction: {}", e)),
+        }
+    }
+
     pub fn get_tx_out(&self, txid: &bitcoin::Txid, vout: u32) -> Result<TxOut> {
         match self.rpc.get_raw_transaction(&txid, None) {
             Ok(raw_tx) => {
@@ -56,6 +78,14 @@ impl BtcCli {
                 debug!("TxOut script_pubkey: {}", tx_out.script_pubkey);
                 Ok(tx_out.clone())
             }
+            Err(e) => Err(anyhow!("Error fetching raw transaction: {}", e)),
+        }
+    }
+
+    pub fn get_tx_out_spent(&self, txid: &bitcoin::Txid, vout: u32) -> Result<bool> {
+        match self.rpc.get_tx_out(&txid, vout, None) {
+            Ok(Some(_)) => Ok(false),
+            Ok(None) => Ok(true),
             Err(e) => Err(anyhow!("Error fetching raw transaction: {}", e)),
         }
     }

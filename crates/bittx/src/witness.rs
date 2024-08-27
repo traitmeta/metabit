@@ -17,7 +17,7 @@ pub fn check_witness_with_prev_txs(
         }
     }
 
-    if res.len() == 0 {
+    if res.is_empty() {
         return None;
     }
 

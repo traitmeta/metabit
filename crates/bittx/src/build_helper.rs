@@ -47,7 +47,7 @@ pub async fn build_anchor_tx(info: types::AnchorInfo) -> Result<(Transaction, Ve
         });
     }
 
-    let my_utxo = utxos.get(0).unwrap();
+    let my_utxo = utxos.first().unwrap();
     let (tx, prev_outs) =
         anchor::build_lightning_anchor_tx(my_utxo, anchor_utxos, info.unlock_bytes);
 

@@ -8,7 +8,7 @@ pub fn build_transfer_tx(
     fee_rate: f32,
     in_utxos: Vec<types::Utxo>,
 ) -> (Transaction, Vec<TxOut>) {
-    let sender_address = Address::from_str(&sender)
+    let sender_address = Address::from_str(sender)
         .unwrap()
         .require_network(Network::Bitcoin)
         .unwrap();
@@ -22,7 +22,7 @@ pub fn build_transfer_tx(
         inputs.push(txin);
     }
 
-    let recipient_address = Address::from_str(&receiver)
+    let recipient_address = Address::from_str(receiver)
         .unwrap()
         .require_network(Network::Bitcoin)
         .unwrap();
@@ -78,7 +78,7 @@ pub fn build_tx(
     (tx, prevouts)
 }
 
-fn calc_change_amount(inputs: Vec<types::Utxo>, outputs: &Vec<TxOut>, fee_rate: f32) -> Amount {
+fn calc_change_amount(inputs: Vec<types::Utxo>, outputs: &[TxOut], fee_rate: f32) -> Amount {
     let mut tx_ins = vec![];
     let mut input_val: u64 = 0;
     for input in inputs.iter() {
@@ -98,7 +98,7 @@ fn calc_change_amount(inputs: Vec<types::Utxo>, outputs: &Vec<TxOut>, fee_rate: 
         version: Version::TWO,
         lock_time: LockTime::from_time(0).unwrap(),
         input: tx_ins,
-        output: outputs.clone(),
+        output: outputs.to_owned(),
     };
 
     // let vsize = get_tx_vsize(tx);

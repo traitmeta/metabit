@@ -38,7 +38,7 @@ pub async fn create_table(pool: Pool<Postgres>) -> Result<(), sqlx::Error> {
     )
     .await?;
 
-    return Ok(());
+    Ok(())
 }
 
 pub struct Dao {

@@ -1,3 +1,4 @@
+use anyhow::Error;
 use repo::Dao;
 use tracing::debug;
 
@@ -185,7 +186,7 @@ async fn handle_tx(tx: Transaction, bot: &TgBot, checker: &SignChecker) {
             continue;
         }
 
-        if input.witness.len() >= 1
+        if !input.witness.is_empty()
             && lightning::is_swept_lightning_anchor(&hex::encode(&input.witness[1]))
         {
             warn!(
@@ -202,7 +203,7 @@ async fn handle_tx(tx: Transaction, bot: &TgBot, checker: &SignChecker) {
 
     if exist {
         info!("Received transaction hash: {}, idx : {}", txid, input_idx);
-        let msg = format!("txid:{},idx:{}", txid.to_string(), input_idx);
+        let msg = format!("txid:{},idx:{}", txid, input_idx);
         match bot.send_msg_to_topic(msg.as_str()).await {
             Ok(_) => {}
             Err(e) => error!("send msg to tg failed. {}", e),
@@ -215,7 +216,7 @@ async fn handle_tx_thread(tx: Transaction, bot: Arc<TgBot>, checker: Arc<SignChe
     let mut exist = false;
     let mut input_idx = 0;
     for (idx, input) in tx.input.iter().enumerate() {
-        if input.witness.len() <= 0 || input.witness.len() > 4 {
+        if input.witness.len() == 0 || input.witness.len() > 4 {
             continue;
         }
 
@@ -223,7 +224,7 @@ async fn handle_tx_thread(tx: Transaction, bot: Arc<TgBot>, checker: Arc<SignChe
             continue;
         }
 
-        if checker.check_input_sign(&input) {
+        if checker.check_input_sign(input) {
             continue;
         }
 
@@ -244,7 +245,7 @@ async fn handle_tx_thread(tx: Transaction, bot: Arc<TgBot>, checker: Arc<SignChe
 
     if exist {
         info!("Received transaction hash: {}, idx : {}", txid, input_idx);
-        let msg = format!("txid:{},idx:{}", txid.to_string(), input_idx);
+        let msg = format!("txid:{},idx:{}", txid, input_idx);
         match bot.send_msg_to_topic(msg.as_str()).await {
             Ok(_) => {}
             Err(e) => error!("send msg to tg failed. {}", e),
@@ -267,18 +268,17 @@ async fn handle_tx_lightning(
     let infos = lightning_info.unwrap();
 
     for info in infos {
-        let _ = dao.insert_anchor_tx_out(info).await;
+        match dao.insert_anchor_tx_out(info).await {
+            Ok(_) => {}
+            Err(e) => error!("Error Insert anchor tx out: {:?}", e),
+        }
     }
 
     info!(
         "Received transaction hash: {}, idx : {}, lightning channel closed",
         txid, input_idx
     );
-    let msg = format!(
-        "Lightning channel close, txid:{}, idx:{}",
-        txid.to_string(),
-        input_idx,
-    );
+    let msg = format!("Lightning channel close, txid:{}, idx:{}", txid, input_idx,);
     match bot.send_msg_to_topic(msg.as_str()).await {
         Ok(_) => {}
         Err(e) => error!("send msg to tg failed. {}", e),

@@ -10,7 +10,5 @@ pub fn get_tx_vsize(tx: Transaction) -> usize {
         .sum::<usize>();
 
     let weight = 3 * non_witness_size + witness_size;
-    let vsize = (weight + 3) / 4;
-
-    vsize
+    (weight + 3) / 4
 }

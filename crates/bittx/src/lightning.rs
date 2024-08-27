@@ -23,7 +23,7 @@ pub fn check_lightning_channel_close(tx: &Transaction) -> Option<types::AnchorUn
     }
 
     let in_witness = &tx.input[0].witness;
-    return is_multisig_2_of_2(in_witness);
+    is_multisig_2_of_2(in_witness)
 }
 
 // 2 <pubkey1> <pubkey2> 2 OP_CHECKMULTISIG

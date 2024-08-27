@@ -17,6 +17,7 @@ impl LightningChecker {
 
     pub fn check_anchor(&self, tx: &Transaction) -> Option<Vec<AnchorTxOut>> {
         if let Some(unlock_info) = bittx::lightning::check_lightning_channel_close(tx) {
+            info!("find anchor {:?}", unlock_info);
             let mut anchor_tx_outs = Vec::new();
             for i in 0..2 {
                 let mut unlock = unlock_info.unlock1.clone();

@@ -21,7 +21,7 @@ pub fn build_lightning_anchor_tx(
 
     let outputs: Vec<TxOut> = vec![receiver_out];
     let (witness_inputs, prev_fetcher) =
-        build_anchor_input_and_prev_fetch(&adder_utxos, anchor_utxos, input_payloads);
+        build_anchor_input_and_prev_fetch(adder_utxos, anchor_utxos, input_payloads);
     let tx = Transaction {
         version: Version::TWO,
         lock_time: LockTime::ZERO,
@@ -57,7 +57,7 @@ pub fn build_anchor_input_and_prev_fetch(
             previous_output: input.out_point,
             script_sig: ScriptBuf::new(),
             sequence: Sequence(0x10),
-            witness: witness,
+            witness,
         };
         prevouts.push(TxOut {
             value: input.value,

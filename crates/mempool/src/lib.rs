@@ -1,4 +1,5 @@
 pub mod utxo;
+pub mod tx;
 
 use anyhow::Result;
 use bitcoin::{Amount, OutPoint};
