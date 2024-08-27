@@ -19,8 +19,6 @@ use tracing_subscriber::{
 use watchdog::{config, receiver::TxReceiver, syncer::Syncer};
 use zmq::Context;
 
-const GRACEFUL_SHUTDOWN_TIMEOUT: u64 = 30;
-
 #[tokio::main]
 async fn main() -> Result<()> {
     // TIPS: guard must have same long lifetime with main
@@ -67,7 +65,7 @@ async fn main() -> Result<()> {
     let syncer_task = tokio::spawn(async move {
         loop {
             tokio::select! {
-                    _ = sleep(Duration::from_secs(3)) => {
+                    _ = sleep(Duration::from_secs(10)) => {
                         info!("Start Syncer ...");
                         anchor_syncer.sync_anchor().await;
                     }
@@ -94,7 +92,7 @@ async fn main() -> Result<()> {
     });
 
     info!("Start watchdog...");
-    tokio::join!(receiver_task, syncer_task, stop_sig_task);
+    let _ = tokio::join!(receiver_task, syncer_task, stop_sig_task);
     info!("Close watchdog...");
 
     Ok(())
@@ -118,8 +116,4 @@ fn logger_init() -> WorkerGuard {
         .init();
 
     guard
-}
-
-fn is_all_request_completed() -> bool {
-    true
 }
