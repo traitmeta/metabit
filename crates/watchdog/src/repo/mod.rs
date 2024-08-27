@@ -7,15 +7,11 @@ use super::*;
 use crate::config;
 use sqlx::{postgres::PgPool, Executor, FromRow, Pool, Postgres};
 
-pub async fn conn_pool(cfg: config::DBConfig) -> Result<Pool<Postgres>, sqlx::Error> {
-    let database_url = cfg.url;
-
-    // 创建 PostgreSQL 连接池
-    PgPool::connect(&database_url).await
+pub async fn conn_pool(cfg: &config::DBConfig) -> Result<Pool<Postgres>, sqlx::Error> {
+    PgPool::connect(&cfg.url).await
 }
 
 pub async fn create_table(pool: Pool<Postgres>) -> Result<(), sqlx::Error> {
-    // 创建日志表
     pool.execute(
         "CREATE TABLE IF NOT EXISTS anchor_tx_out (
             tx_id TEXT,

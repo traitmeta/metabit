@@ -53,8 +53,9 @@ impl Dao {
     pub async fn get_unpent_comfiremd_anchor_tx_out(
         &self,
     ) -> Result<Vec<AnchorTxOut>, sqlx::Error> {
+        // "SELECT * FROM anchor_tx_out WHERE spent = $1 and confirmed_block_height = $2 order by create_at desc limit 100",
         let resp_data: Vec<AnchorTxOut> = sqlx::query_as(
-            "SELECT * FROM anchor_tx_out WHERE spent = $1 and confirmed_block_height = $2 order by create_at desc limit 100",
+            "SELECT * FROM anchor_tx_out WHERE spent = $1 and confirmed_block_height = $2 limit 100",
         )
         .bind(false)
         .bind(0)

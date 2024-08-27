@@ -17,11 +17,10 @@ pub struct Config {
     pub database: DBConfig,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct DBConfig {
     pub url: String,
 }
-
 
 #[derive(Deserialize, Debug)]
 pub struct BitcoinConfig {

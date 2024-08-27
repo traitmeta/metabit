@@ -17,12 +17,12 @@ pub struct TxReceiver {
 }
 
 impl TxReceiver {
-    pub async fn new(cfg: config::Config) -> Self {
+    pub async fn new(cfg: &config::Config) -> Self {
         let bot = TgBot::new(&cfg.tgbot.token, cfg.tgbot.chat_id, cfg.tgbot.tx_topic_id);
         let btccli = BtcCli::new(&cfg.bitcoin.endpoint, &cfg.bitcoin.user, &cfg.bitcoin.pass);
         let sign_checker = SignChecker::new(btccli);
         let lightning_checker = LightningChecker::new();
-        let conn_pool = repo::conn_pool(cfg.database).await.unwrap();
+        let conn_pool = repo::conn_pool(&cfg.database).await.unwrap();
         let dao = Dao::new(conn_pool);
         Self {
             bot: Arc::new(bot),
@@ -96,7 +96,7 @@ impl TxReceiver {
 
     #[tracing::instrument(skip_all)]
     pub async fn handle_recv(&self, tx_data: Vec<u8>) {
-        if tx_data.len() == 0 {
+        if tx_data.is_empty() {
             return;
         }
 
@@ -173,7 +173,7 @@ async fn handle_tx(tx: Transaction, bot: &TgBot, checker: &SignChecker) {
     let mut exist = false;
     let mut input_idx = 0;
     for (idx, input) in tx.input.iter().enumerate() {
-        if input.witness.len() == 0 {
+        if input.witness.is_empty() {
             continue;
         }
 

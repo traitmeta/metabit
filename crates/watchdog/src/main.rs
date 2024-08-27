@@ -16,7 +16,7 @@ use tracing_subscriber::{
     util::SubscriberInitExt,
     EnvFilter, Layer, Registry,
 };
-use watchdog::{config, receiver::TxReceiver};
+use watchdog::{config, receiver::TxReceiver, syncer::Syncer};
 use zmq::Context;
 
 const GRACEFUL_SHUTDOWN_TIMEOUT: u64 = 30;
@@ -35,49 +35,66 @@ async fn main() -> Result<()> {
     let zmq_url = format!("tcp://{}:{}", cfg.bitcoin.zmq, cfg.bitcoin.zmq_port);
     subscriber.connect(zmq_url.as_str()).unwrap();
     subscriber.set_subscribe(b"rawtx").unwrap();
-    let tx_receiver = TxReceiver::new(cfg).await;
+    let tx_receiver = TxReceiver::new(&cfg).await;
+    let mut rx1 = tx.subscribe();
+    let receiver_task = tokio::spawn(async move {
+        loop {
+            tokio::select! {
+                    _ = sleep(Duration::from_millis(10)) => {
+                        let topic = subscriber.recv_msg(0).unwrap();
+                        debug!("Received topic : {:?}", topic.as_str());
+                        if topic.as_str().is_none() {
+                            continue;
+                        }
 
-    info!("Start watchdog...");
-    loop {
-        tokio::select! {
-            _ = sleep(Duration::from_millis(1)) => {
-                let topic = subscriber.recv_msg(0).unwrap();
-                debug!("Received topic : {:?}",topic.as_str());
-                if topic.as_str().is_none(){
-                    continue
+                        if topic.as_str().unwrap() != "rawtx" {
+                            continue;
+                        }
+
+                        let tx_data = subscriber.recv_bytes(0).unwrap();
+                        tx_receiver.handle_recv(tx_data).await;
+                    }
+                _ = rx1.recv() => {
+                    info!("Received SIGTERM, receiver task shutting down gracefully...");
+                    return;
                 }
-
-                if topic.as_str().unwrap() != "rawtx"{
-                    continue
-                }
-
-                let tx_data = subscriber.recv_bytes(0).unwrap();
-                tx_receiver.handle_recv(tx_data).await;
             }
+        }
+    });
+
+    let anchor_syncer = Syncer::new(&cfg).await;
+    let mut rx2 = tx.subscribe();
+    let syncer_task = tokio::spawn(async move {
+        loop {
+            tokio::select! {
+                    _ = sleep(Duration::from_secs(3)) => {
+                        info!("Start Syncer ...");
+                        anchor_syncer.sync_anchor().await;
+                    }
+                _ = rx2.recv() => {
+                    info!("Received SIGTERM, sync task shutting down gracefully...");
+                    return;
+
+                }
+            }
+        }
+    });
+
+    let stop_sig_task = tokio::spawn(async move {
+        tokio::select! {
             _ = sigterm.recv() => {
+                tx.send(true).unwrap();
                 info!("Received SIGTERM, shutting down gracefully...");
-                break
             }
             _ = sigint.recv() => {
+                tx.send(true).unwrap();
                 info!("Received SIGINT, shutting down gracefully...");
-                break
             }
         }
-    }
+    });
 
-    tx.send(true).unwrap();
-    let start_time = std::time::Instant::now();
-    while start_time.elapsed().as_secs() < GRACEFUL_SHUTDOWN_TIMEOUT {
-        if is_all_request_completed() {
-            break;
-        }
-        sleep(Duration::from_secs(1)).await;
-    }
-
-    if !is_all_request_completed() {
-        info!("Graceful shutdown timeout, closing server...");
-    }
-
+    info!("Start watchdog...");
+    tokio::join!(receiver_task, syncer_task, stop_sig_task);
     info!("Close watchdog...");
 
     Ok(())
