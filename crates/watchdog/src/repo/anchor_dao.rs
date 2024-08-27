@@ -22,7 +22,7 @@ impl Dao {
         &self,
         current_block_height: i64,
     ) -> Result<Vec<AnchorTxOut>, sqlx::Error> {
-        let expired_block_height = current_block_height - 16;
+        let expired_block_height = current_block_height - 15;
         let resp_data: Vec<AnchorTxOut> =
             sqlx::query_as("SELECT * FROM anchor_tx_out WHERE spent = ? and confirmed_block_height > ? and confirmed_block_height < ?")
                 .bind(false)
@@ -38,7 +38,7 @@ impl Dao {
         &self,
         current_block_height: i64,
     ) -> Result<Vec<AnchorTxOut>, sqlx::Error> {
-        let expired_block_height = current_block_height - 15;
+        let expired_block_height = current_block_height - 14;
         let resp_data: Vec<AnchorTxOut> = sqlx::query_as(
             "SELECT * FROM anchor_tx_out WHERE spent = $1 and confirmed_block_height = $2",
         )

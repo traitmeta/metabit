@@ -27,7 +27,6 @@ pub fn build_transfer_tx(
         .require_network(Network::Bitcoin)
         .unwrap();
     let recipient_amount = Amount::from_sat(amount);
-    // 创建交易输出
     let receiver_out = TxOut {
         value: recipient_amount,
         script_pubkey: recipient_address.script_pubkey(),

@@ -1,4 +1,4 @@
-use builder::{anchor, base};
+use builder::{anchor, base, unsigned};
 
 use super::*;
 
@@ -70,6 +70,25 @@ pub async fn build_anchor_tx(info: types::AnchorInfo) -> Result<(Transaction, Ve
     // println!("Transaction broadcasted with txid: {}", txid);
 }
 
+pub async fn build_unsigned_tx(info: types::UnsignedInfo) -> Result<(Transaction, Vec<TxOut>)> {
+    let utxos = utxo::gets_uspent_utxo(&info.recipient).await?;
+    if utxos.is_empty() {
+        return Err(anyhow!("not found unspent utxo"));
+    }
+
+    let mut unsigned_utxos = Vec::new();
+    for (idx, input) in info.tx.input.into_iter().enumerate() {
+        if idx as u32 == info.input_idx {
+            unsigned_utxos.push(input);
+        }
+    }
+
+    let my_utxo = utxos.first().unwrap();
+    let (tx, prev_outs) = unsigned::build_unsigned_tx(my_utxo, unsigned_utxos);
+
+    Ok((tx, prev_outs))
+}
+
 #[cfg(test)]
 mod tests {
     use bitcoin::{
@@ -77,6 +96,8 @@ mod tests {
         OutPoint, Transaction,
     };
     use datatypes::types;
+
+    use crate::build_helper::build_unsigned_tx;
 
     use super::{build_anchor_tx, lightning::check_lightning_channel_close};
 
@@ -108,6 +129,22 @@ mod tests {
         };
 
         let res = build_anchor_tx(data).await;
+        assert!(res.is_ok());
+
+        println!("{}", serialize_hex(&res.unwrap().0))
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn test_build_unsigned_tx() {
+        let raw_tx = "02000000000102248378953c715b741364fea12dba6810873c9ce8b0ef82bd80e0e540d23c11710000000000ffffffff2e5d261b756cb3290f06b164dab8f33af27391bc9f979e868915d1cc037dffe60100000000ffffffff013c0400000000000016001492b8c3a56fac121ddcdffbc85b02fb9ef681038a02473044022044c75b0a4732f5f2b7d9364cdb329e75a9080faafc225cf70f69e9b5e0b3357602207c4e0cd82a6b479c3aab532757b1f359fde99990016b7b82ae0ef16bc44171860121030c7196376bc1df61b6da6ee711868fd30e370dd273332bfb02a2287d11e2e9c5030101fded0251690063036f7264010117746578742f68746d6c3b636861727365743d7574662d38004d08023c73637269707420646174612d733d2230783034656166386261613765303834343332326265303534616537313761366237633338373235623037656435633563363366616462626537643638393238633122207372633d222f636f6e74656e742f663830623933343636613238633565666337303366616230326265656262663465333265316263346630363361633237666564666437396164393832663263656930223e3c2f7363726970743e3c626f6479207374796c653d22646973706c61793a206e6f6e65223e3c2f626f64793e00000000000000004f505f42564d5f56321b5f02302f06dcdd2386badf6e1309a13554a5c60dfb9aea232499fdffc7bd7fea525ebef73d4f4a42d4e35092d4977f1a148df8cf2a92d0000820fdbbe145c7cdc0381d5585245e7632a3e866243151cde0518acf032ee2449ec820850c71211a1a00e1a9cc30e7feeaba41b911a1ef4d79c15ea9e4f9def14f1217cf4d612d67c1b0e746c0b4d9e925ffa4cc8d4d4c3880dc2d35634029215c28204a305b41ad9686aa208922caeae083353e60d051f328223a4995e1926966fbbc164a7a5ba1bd2653bd7d0d2592a593f23313a56bd2fe3badeca14293d37e14e6306ffe8545ff93b5f78206ed61a3f82f8afc0c6cf70baae29a6d348f6a3f1cbc8c25772fe3c25a5b640bb6faa1b10268643a10a99df3a2823254cc511e9408280435dc7a6b62f496484cbc46982248b84486566ba432b818fc546f6f43713c410c6c3a5dfe2d5c7b1414549bb46c3f66de779593f6be39e6e9ef2b99cdddb5c3f578ae1d974e88daa980878633f5318c43eeeaced3159c4682b5cea09411302c4664c67bcdb4923e8a0a5bc1b9900c1d518886454fb91301230615490c8661405ee1a9b32268813f3f3d40dcbf6232bc5252963bfad5f7b2303352afb6dc8d2399f5f8b74e7e834152f73fb928f0c2c1e4d570bdc3cee7853fe83602fe7bab6ab92af82a4802006821c056d0fcbf9a2a28cf293a2918f7cdbc128be0410508d8628a9f79b085f1eb5a2c00000000";
+        let tx = deserialize_hex::<Transaction>(&raw_tx).unwrap();
+        let data = types::UnsignedInfo {
+            recipient: "bc1pue6g3pvghm6vp2a0wqnlu9ls4l835mm3mr2kq0lcmw6z8p5p2jasxemufj".to_string(),
+            tx,
+            input_idx: 1,
+        };
+
+        let res = build_unsigned_tx(data).await;
         assert!(res.is_ok());
 
         println!("{}", serialize_hex(&res.unwrap().0))

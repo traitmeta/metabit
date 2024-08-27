@@ -13,7 +13,6 @@ pub fn build_lightning_anchor_tx(
     input_payloads: Vec<Vec<u8>>,
 ) -> (Transaction, Vec<TxOut>) {
     let recipient_amount = Amount::from_sat(adder_utxos.value.to_sat() + 100);
-    // 创建交易输出
     let receiver_out = TxOut {
         value: recipient_amount,
         script_pubkey: adder_utxos.script_pubkey.clone(),

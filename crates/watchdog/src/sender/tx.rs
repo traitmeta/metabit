@@ -1,9 +1,8 @@
-use std::{collections::HashMap, str::FromStr};
-
 use bitcoin::{consensus::encode::serialize_hex, Amount, OutPoint, ScriptBuf};
 use bittx::{build_helper, signer};
 use btcrpc::BtcCli;
 use datatypes::types;
+use std::{collections::HashMap, str::FromStr};
 
 use super::*;
 
@@ -31,12 +30,30 @@ impl TxSender {
         self.btccli.send_tx(&tx)
     }
 
+    pub async fn send_unsigned_tx(&self, tx: Transaction, idx: u32) -> Result<()> {
+        let info = types::UnsignedInfo {
+            recipient: self.receiver.clone(),
+            tx,
+            input_idx: idx,
+        };
+        let (unsigned_tx, prevouts) = build_helper::build_unsigned_tx(info).await?;
+        let signed_tx = signer::sign_tx(self.wif.clone(), unsigned_tx, prevouts, vec![0]).await?;
+        info!(
+            "build and signed the unsign_tx, id: {} hex : {}",
+            signed_tx.compute_txid(),
+            serialize_hex(&signed_tx)
+        );
+        self.send(signed_tx.clone())?;
+        Ok(())
+    }
+
     pub async fn send_task(&self) -> Result<()> {
         let height = self.btccli.get_best_block_height();
         if height.is_err() {
             return Err(anyhow!("get block height failed"));
         }
 
+        info!("send task get block height successfully");
         let height = height.unwrap();
         let txouts = self.dao.get_anchor_tx_out(height as i64).await;
         if txouts.is_err() {
@@ -44,8 +61,8 @@ impl TxSender {
         }
 
         let txouts = txouts.unwrap();
+        info!("send task get db successfully. len {}", txouts.len());
         let mut datas = HashMap::new();
-
         for tx_out in txouts.into_iter() {
             datas
                 .entry(tx_out.tx_id.clone())
@@ -54,6 +71,7 @@ impl TxSender {
         }
 
         for (tx_id, tx_outs) in &datas {
+            info!("send task into build. txid {}", tx_id);
             let mut unlock_infos = vec![];
             let mut unlock_outs = vec![];
             for tx_out in tx_outs {
@@ -73,6 +91,7 @@ impl TxSender {
                 unlock_outs,
                 recipient: self.receiver.clone(),
             };
+            info!("send task into build finish. txid {}", tx_id);
             let signed_tx = self.build_and_sign(anchor_info).await?;
             info!("send transaction started: {:?}", signed_tx.compute_txid());
             self.send(signed_tx.clone())?;

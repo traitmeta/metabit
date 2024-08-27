@@ -103,7 +103,7 @@ impl TxReceiver {
         debug!("received from zmq : {:?}", tx_data);
         match deserialize::<Transaction>(&tx_data) {
             Ok(tx) => {
-                info!("received tx : {}", tx.compute_txid());
+                debug!("received tx : {}", tx.compute_txid());
                 let my_bot = self.bot.clone();
                 let my_sign_checker = self.sign_checker.clone();
                 let tx1 = tx.clone();
@@ -226,16 +226,6 @@ async fn handle_tx_thread(tx: Transaction, bot: Arc<TgBot>, checker: Arc<SignChe
         if checker.check_input_sign(input) {
             continue;
         }
-
-        // if input.witness.len() >= 1
-        //     && lightning::is_swept_lightning_anchor(&hex::encode(&input.witness[1]))
-        // {
-        //     warn!(
-        //         "Received transaction hash: {}. Swept Lightning Anchor",
-        //         txid
-        //     );
-        //     continue;
-        // }
 
         exist = true;
         input_idx = idx;
