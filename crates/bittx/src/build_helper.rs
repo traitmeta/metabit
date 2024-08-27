@@ -39,9 +39,9 @@ pub async fn build_anchor_tx(info: types::AnchorInfo) -> Result<(Transaction, Ve
     }
 
     let mut anchor_utxos = Vec::new();
-    for (idx, out) in info.unlock_outs.iter().enumerate() {
+    for (out, out_point) in info.unlock_outs.iter() {
         anchor_utxos.push(types::Utxo {
-            out_point: OutPoint::from_str(&format!("{}:{}", info.anchor_txid, idx)).unwrap(),
+            out_point: *out_point,
             value: out.value,
             script_pubkey: out.script_pubkey.clone(),
         });
@@ -74,7 +74,7 @@ pub async fn build_anchor_tx(info: types::AnchorInfo) -> Result<(Transaction, Ve
 mod tests {
     use bitcoin::{
         consensus::encode::{deserialize_hex, serialize_hex},
-        Transaction,
+        OutPoint, Transaction,
     };
     use datatypes::types;
 
@@ -89,8 +89,20 @@ mod tests {
             anchor_txid: tx.compute_txid().to_string(),
             unlock_bytes: vec![unlock_info.unlock1, unlock_info.unlock2],
             unlock_outs: vec![
-                tx.output.get(0).unwrap().clone(),
-                tx.output.get(1).unwrap().clone(),
+                (
+                    tx.output.get(0).unwrap().clone(),
+                    OutPoint {
+                        txid: tx.compute_txid(),
+                        vout: 0,
+                    },
+                ),
+                (
+                    tx.output.get(1).unwrap().clone(),
+                    OutPoint {
+                        txid: tx.compute_txid(),
+                        vout: 1,
+                    },
+                ),
             ],
             recipient: "bc1pdwy6qmwjhfng95v96avuer8za40vy7f66u5cphn9e09dzr6eemfstalyac".to_string(),
         };

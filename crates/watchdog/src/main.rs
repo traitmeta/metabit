@@ -5,7 +5,7 @@ use tokio::{
     sync::broadcast,
     time::sleep,
 };
-use tracing::{debug, info};
+use tracing::{debug, error, info};
 use tracing_appender::{
     non_blocking::WorkerGuard,
     rolling::{RollingFileAppender, Rotation},
@@ -16,7 +16,7 @@ use tracing_subscriber::{
     util::SubscriberInitExt,
     EnvFilter, Layer, Registry,
 };
-use watchdog::{config, receiver::TxReceiver, syncer::Syncer};
+use watchdog::{config, receiver::TxReceiver, sender::tx::TxSender, syncer::Syncer};
 use zmq::Context;
 
 #[tokio::main]
@@ -78,6 +78,29 @@ async fn main() -> Result<()> {
         }
     });
 
+    let tx_sender = TxSender::new(&cfg).await;
+    let mut rx3 = tx.subscribe();
+    let sender_task = tokio::spawn(async move {
+        loop {
+            tokio::select! {
+                    _ = sleep(Duration::from_secs(3)) => {
+                        info!("Start Tx Sender ...");
+                        match tx_sender.send_task().await{
+                            Ok(_)=> {},
+                            Err(err) => {
+                                error!("Error sending task: {:?}", err);
+                            }
+                        }
+                    }
+                _ = rx3.recv() => {
+                    info!("Received SIGTERM, tx send task shutting down gracefully...");
+                    return;
+
+                }
+            }
+        }
+    });
+
     let stop_sig_task = tokio::spawn(async move {
         tokio::select! {
             _ = sigterm.recv() => {
@@ -92,7 +115,7 @@ async fn main() -> Result<()> {
     });
 
     info!("Start watchdog...");
-    let _ = tokio::join!(receiver_task, syncer_task, stop_sig_task);
+    let _ = tokio::join!(receiver_task, syncer_task, sender_task, stop_sig_task);
     info!("Close watchdog...");
 
     Ok(())

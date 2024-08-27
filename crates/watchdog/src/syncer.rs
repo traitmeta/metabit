@@ -65,34 +65,36 @@ impl Syncer {
 
     // TODO feerate < 1 set confirmed to -1
     pub async fn sync_anchor(&self) {
-        let tx_outs = self.dao.get_unpent_comfiremd_anchor_tx_out().await.unwrap();
+        let tx_outs = self.dao.get_unpent_tx_out().await.unwrap();
         for out in tx_outs.iter() {
             let txid = Txid::from_str(out.tx_id.as_str()).unwrap();
-            match self.btccli.get_raw_transaction_info(&txid) {
-                Ok((raw_tx, _)) => {
-                    if raw_tx.blockhash.is_none() {
-                        continue;
-                    }
+            if out.confirmed_block_height == 0 {
+                match self.btccli.get_raw_transaction_info(&txid) {
+                    Ok((raw_tx, _)) => {
+                        if raw_tx.blockhash.is_none() {
+                            continue;
+                        }
 
-                    let blockhash = raw_tx.blockhash.unwrap();
-                    if let Ok(block) = self.btccli.get_block_by_hash(blockhash) {
-                        match self
-                            .dao
-                            .update_anchor_tx_confirmed_height(
-                                block.bip34_block_height().unwrap() as i64,
-                                raw_tx.txid.to_string(),
-                            )
-                            .await
-                        {
-                            Ok(_) => {}
-                            Err(e) => {
-                                error!("update_anchor_tx_confirmed_height failed : {}", e)
+                        let blockhash = raw_tx.blockhash.unwrap();
+                        if let Ok(block) = self.btccli.get_block_by_hash(blockhash) {
+                            match self
+                                .dao
+                                .update_anchor_tx_confirmed_height(
+                                    block.bip34_block_height().unwrap() as i64,
+                                    raw_tx.txid.to_string(),
+                                )
+                                .await
+                            {
+                                Ok(_) => {}
+                                Err(e) => {
+                                    error!("update_anchor_tx_confirmed_height failed : {}", e)
+                                }
                             }
                         }
                     }
-                }
-                Err(e) => {
-                    error!("get tx out {} vout {} failed : {}", txid, out.vout, e);
+                    Err(e) => {
+                        error!("get tx out {} vout {} failed : {}", txid, out.vout, e);
+                    }
                 }
             }
 

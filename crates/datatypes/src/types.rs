@@ -17,7 +17,7 @@ pub struct TransferInfo {
 pub struct AnchorInfo {
     pub anchor_txid: String,
     pub unlock_bytes: Vec<Vec<u8>>,
-    pub unlock_outs: Vec<TxOut>,
+    pub unlock_outs: Vec<(TxOut, OutPoint)>,
     pub recipient: String,
 }
 

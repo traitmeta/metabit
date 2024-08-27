@@ -6,7 +6,7 @@ use bitcoin::opcodes::all::{
 };
 use bitcoin::script::{Instruction, PushBytes};
 use bitcoin::transaction::Version;
-use bitcoin::{Address, Amount, Network, OutPoint, Script, ScriptBuf, Sequence, Witness};
+use bitcoin::{Address, Amount, Network, Script, ScriptBuf, Sequence, Witness};
 use datatypes::types;
 use mempool::{self, utxo};
 use std::str::FromStr;

@@ -38,9 +38,9 @@ impl Dao {
         &self,
         current_block_height: i64,
     ) -> Result<Vec<AnchorTxOut>, sqlx::Error> {
-        let expired_block_height = current_block_height - 16;
+        let expired_block_height = current_block_height - 15;
         let resp_data: Vec<AnchorTxOut> = sqlx::query_as(
-            "SELECT * FROM anchor_tx_out WHERE spent = ? and confirmed_block_height = ?",
+            "SELECT * FROM anchor_tx_out WHERE spent = $1 and confirmed_block_height = $2",
         )
         .bind(false)
         .bind(expired_block_height)
@@ -50,12 +50,23 @@ impl Dao {
         Ok(resp_data)
     }
 
-    pub async fn get_unpent_comfiremd_anchor_tx_out(
+    pub async fn get_anchor_tx_out_by_tx_id(
         &self,
+        tx_id: String,
     ) -> Result<Vec<AnchorTxOut>, sqlx::Error> {
+        let resp_data: Vec<AnchorTxOut> =
+            sqlx::query_as("SELECT * FROM anchor_tx_out WHERE tx_id = $1 ORDER BY vout")
+                .bind(tx_id)
+                .fetch_all(&self.pool)
+                .await?;
+
+        Ok(resp_data)
+    }
+
+    pub async fn get_unpent_tx_out(&self) -> Result<Vec<AnchorTxOut>, sqlx::Error> {
         // "SELECT * FROM anchor_tx_out WHERE spent = $1 and confirmed_block_height = $2 order by create_at desc limit 100",
         let resp_data: Vec<AnchorTxOut> = sqlx::query_as(
-            "SELECT * FROM anchor_tx_out WHERE spent = $1 and confirmed_block_height = $2 limit 100",
+            "SELECT * FROM anchor_tx_out WHERE spent = $1 or confirmed_block_height = $2 limit 100",
         )
         .bind(false)
         .bind(0)
