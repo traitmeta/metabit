@@ -24,7 +24,8 @@ async fn main() -> Result<()> {
     // TIPS: guard must have same long lifetime with main
     let _guard = logger_init();
 
-    let (tx, _rx) = broadcast::channel(1);
+    let (tx, _) = broadcast::channel(1);
+    let (tx_send, mut tx_msg_rcv) = broadcast::channel(1024);
     let mut sigterm = signal(SignalKind::terminate())?;
     let mut sigint = signal(SignalKind::interrupt())?;
     let cfg = config::read_config();
@@ -35,23 +36,24 @@ async fn main() -> Result<()> {
     subscriber.set_subscribe(b"rawtx").unwrap();
     let tx_receiver = TxReceiver::new(&cfg).await;
     let mut rx1 = tx.subscribe();
+    let tx_send1 = tx_send.clone();
     let receiver_task = tokio::spawn(async move {
         loop {
             tokio::select! {
-                    _ = sleep(Duration::from_millis(10)) => {
-                        let topic = subscriber.recv_msg(0).unwrap();
-                        debug!("Received topic : {:?}", topic.as_str());
-                        if topic.as_str().is_none() {
-                            continue;
-                        }
-
-                        if topic.as_str().unwrap() != "rawtx" {
-                            continue;
-                        }
-
-                        let tx_data = subscriber.recv_bytes(0).unwrap();
-                        tx_receiver.handle_recv(tx_data).await;
+                _ = sleep(Duration::from_millis(10)) => {
+                    let topic = subscriber.recv_msg(0).unwrap();
+                    debug!("Received topic : {:?}", topic.as_str());
+                    if topic.as_str().is_none() {
+                        continue;
                     }
+
+                    if topic.as_str().unwrap() != "rawtx" {
+                        continue;
+                    }
+
+                    let tx_data = subscriber.recv_bytes(0).unwrap();
+                    tx_receiver.handle_recv(tx_data,&tx_send1).await;
+                }
                 _ = rx1.recv() => {
                     info!("Received SIGTERM, receiver task shutting down gracefully...");
                     return;
@@ -65,10 +67,10 @@ async fn main() -> Result<()> {
     let syncer_task = tokio::spawn(async move {
         loop {
             tokio::select! {
-                    _ = sleep(Duration::from_secs(10)) => {
-                        info!("Start Syncer ...");
-                        anchor_syncer.sync_anchor().await;
-                    }
+                _ = sleep(Duration::from_secs(10)) => {
+                    info!("Start Syncer ...");
+                    anchor_syncer.sync_anchor().await;
+                }
                 _ = rx2.recv() => {
                     info!("Received SIGTERM, sync task shutting down gracefully...");
                     return;
@@ -83,19 +85,34 @@ async fn main() -> Result<()> {
     let sender_task = tokio::spawn(async move {
         loop {
             tokio::select! {
-                    _ = sleep(Duration::from_secs(3)) => {
-                        info!("Start Tx Sender ...");
-                        match tx_sender.send_task().await{
-                            Ok(_)=> {},
-                            Err(err) => {
-                                error!("Error sending task: {:?}", err);
-                            }
+                _ = sleep(Duration::from_secs(3)) => {
+                    info!("Start Tx Sender Anchor...");
+                    match tx_sender.send_task().await{
+                        Ok(_)=> {},
+                        Err(err) => {
+                            error!("Error sending task: {:?}", err);
                         }
                     }
+                }
+                info = tx_msg_rcv.recv() => {
+                    info!("Start Tx Sender Unsigned...");
+                    match info{
+                        Ok((tx,idx))=> {
+                            match tx_sender.send_unsigned_tx(tx,idx).await{
+                                Ok(_)=> {},
+                                Err(err) => {
+                                    error!("Error sending task: {:?}", err);
+                                }
+                            }
+                        },
+                        Err(err) => {
+                            error!("Error sending task: {:?}", err);
+                        }
+                    }
+                }
                 _ = rx3.recv() => {
                     info!("Received SIGTERM, tx send task shutting down gracefully...");
                     return;
-
                 }
             }
         }

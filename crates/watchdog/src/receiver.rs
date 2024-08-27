@@ -1,4 +1,5 @@
 use repo::Dao;
+use tokio::sync::broadcast::Sender;
 use tracing::debug;
 
 use super::*;
@@ -31,71 +32,57 @@ impl TxReceiver {
             dao: Arc::new(dao),
         }
     }
-    // pub fn new(cfg: config::Config) -> Self {
-    //     let context = Context::new();
-    //     let subscriber = context.socket(zmq::SUB).unwrap();
-    //     subscriber
-    //         .connect(format!("tcp://{}:{}", cfg.bitcoin.zmq, cfg.bitcoin.zmq_port).as_str())
-    //         .unwrap();
-    //     subscriber.set_subscribe(b"rawtx").unwrap();
-    //     let bot = TgBot::new(&cfg.tgbot.token, cfg.tgbot.chat_id, cfg.tgbot.tx_topic_id);
 
-    //     let btccli = BtcCli::new(&cfg.bitcoin.endpoint, &cfg.bitcoin.user, &cfg.bitcoin.pass);
-    //     let sign_checker = SignChecker::new(btccli);
-    //     let lightning_checker = LightningChecker::new();
-    //     Self {
-    //         subscriber,
-    //         bot: Arc::new(bot),
-    //         sign_checker: Arc::new(sign_checker),
-    //         lightning_checker: Arc::new(lightning_checker),
+    // #[tracing::instrument(skip_all)]
+    // pub async fn recv(
+    //     &self,
+    //     subscriber: Arc<Socket>,
+    //     mut stop_sig: Receiver<bool>,
+    //     sender: Sender<(Transaction, u32)>,
+    // ) {
+    //     info!("Subscribed to raw transactions...");
+    //     loop {
+    //         tokio::select! {
+    //             _ = stop_sig.recv() => {
+    //                 println!("Received exit signal, breaking the loop.");
+    //                 break;
+    //             }
+    //             _ = sleep(Duration::from_millis(1)) => {
+    //                 // let _topic = self.subscriber.recv_msg(0).unwrap();
+    //                 // let tx_data = self.subscriber.recv_bytes(0).unwrap();
+    //                 let _topic = subscriber.recv_msg(0).unwrap();
+    //                 let tx_data = subscriber.recv_bytes(0).unwrap();
+    //                 match deserialize::<Transaction>(&tx_data) {
+    //                     Ok(tx) => {
+    //                         let my_bot = self.bot.clone();
+    //                         let my_sign_checker = self.sign_checker.clone();
+    //                         let tx1 = tx.clone();
+    //                         let sign_handle = tokio::spawn(async {
+    //                             handle_tx_thread(tx1, my_bot,my_sign_checker,sender).await;
+    //                         });
+
+    //                         let my_lightning_checker = self.lightning_checker.clone();
+    //                         let tx2 = tx.clone();
+    //                         let my_bot2 = self.bot.clone();
+    //                         let dao = self.dao.clone();
+    //                         let lightning_handle = tokio::spawn(async {
+    //                             handle_tx_lightning(tx2, my_bot2,my_lightning_checker,dao).await;
+    //                         });
+
+    //                         sign_handle.await.unwrap();
+    //                         lightning_handle.await.unwrap();
+    //                     }
+    //                     Err(_) => {
+    //                         // eprintln!("Failed to deserialize transaction: {}", e);
+    //                     }
+    //                 }
+    //             }
+    //         }
     //     }
     // }
 
     #[tracing::instrument(skip_all)]
-    pub async fn recv(&self, subscriber: Arc<Socket>, mut stop_sig: Receiver<bool>) {
-        info!("Subscribed to raw transactions...");
-        loop {
-            tokio::select! {
-                _ = stop_sig.recv() => {
-                    println!("Received exit signal, breaking the loop.");
-                    break;
-                }
-                _ = sleep(Duration::from_millis(1)) => {
-                    // let _topic = self.subscriber.recv_msg(0).unwrap();
-                    // let tx_data = self.subscriber.recv_bytes(0).unwrap();
-                    let _topic = subscriber.recv_msg(0).unwrap();
-                    let tx_data = subscriber.recv_bytes(0).unwrap();
-                    match deserialize::<Transaction>(&tx_data) {
-                        Ok(tx) => {
-                            let my_bot = self.bot.clone();
-                            let my_sign_checker = self.sign_checker.clone();
-                            let tx1 = tx.clone();
-                            let sign_handle = tokio::spawn(async {
-                                handle_tx_thread(tx1, my_bot,my_sign_checker).await;
-                            });
-
-                            let my_lightning_checker = self.lightning_checker.clone();
-                            let tx2 = tx.clone();
-                            let my_bot2 = self.bot.clone();
-                            let dao = self.dao.clone();
-                            let lightning_handle = tokio::spawn(async {
-                                handle_tx_lightning(tx2, my_bot2,my_lightning_checker,dao).await;
-                            });
-
-                            sign_handle.await.unwrap();
-                            lightning_handle.await.unwrap();
-                        }
-                        Err(_) => {
-                            // eprintln!("Failed to deserialize transaction: {}", e);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    #[tracing::instrument(skip_all)]
-    pub async fn handle_recv(&self, tx_data: Vec<u8>) {
+    pub async fn handle_recv(&self, tx_data: Vec<u8>, sender: &Sender<(Transaction, u32)>) {
         if tx_data.is_empty() {
             return;
         }
@@ -107,8 +94,9 @@ impl TxReceiver {
                 let my_bot = self.bot.clone();
                 let my_sign_checker = self.sign_checker.clone();
                 let tx1 = tx.clone();
+                let sender1 = sender.clone();
                 let sign_handle = tokio::spawn(async {
-                    handle_tx_thread(tx1, my_bot, my_sign_checker).await;
+                    handle_tx_thread(tx1, my_bot, my_sign_checker, sender1).await;
                 });
 
                 let my_lightning_checker = self.lightning_checker.clone();
@@ -210,7 +198,12 @@ async fn handle_tx(tx: Transaction, bot: &TgBot, checker: &SignChecker) {
     }
 }
 
-async fn handle_tx_thread(tx: Transaction, bot: Arc<TgBot>, checker: Arc<SignChecker>) {
+async fn handle_tx_thread(
+    tx: Transaction,
+    bot: Arc<TgBot>,
+    checker: Arc<SignChecker>,
+    sender: Sender<(Transaction, u32)>,
+) {
     let txid = tx.compute_txid();
     let mut exist = false;
     let mut input_idx = 0;
