@@ -6,6 +6,12 @@ use super::*;
 
 pub struct LightningChecker {}
 
+impl Default for LightningChecker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LightningChecker {
     pub fn new() -> Self {
         LightningChecker {}

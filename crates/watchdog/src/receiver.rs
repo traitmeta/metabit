@@ -1,4 +1,3 @@
-use anyhow::Error;
 use repo::Dao;
 use tracing::debug;
 
@@ -174,7 +173,7 @@ async fn handle_tx(tx: Transaction, bot: &TgBot, checker: &SignChecker) {
     let mut exist = false;
     let mut input_idx = 0;
     for (idx, input) in tx.input.iter().enumerate() {
-        if input.witness.len() <= 0 {
+        if input.witness.len() == 0 {
             continue;
         }
 
@@ -182,7 +181,7 @@ async fn handle_tx(tx: Transaction, bot: &TgBot, checker: &SignChecker) {
             continue;
         }
 
-        if checker.check_input_sign(&input) {
+        if checker.check_input_sign(input) {
             continue;
         }
 
@@ -216,7 +215,7 @@ async fn handle_tx_thread(tx: Transaction, bot: Arc<TgBot>, checker: Arc<SignChe
     let mut exist = false;
     let mut input_idx = 0;
     for (idx, input) in tx.input.iter().enumerate() {
-        if input.witness.len() == 0 || input.witness.len() > 4 {
+        if input.witness.is_empty() || input.witness.len() > 4 {
             continue;
         }
 

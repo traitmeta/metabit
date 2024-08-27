@@ -15,9 +15,7 @@ impl BtcCli {
 
     pub fn get_best_block_height(&self) -> Result<u64> {
         match self.rpc.get_block_count() {
-            Ok(height) => {
-                return Ok(height);
-            }
+            Ok(height) => Ok(height),
             Err(e) => Err(anyhow!("Failed to fetch block count: {:?}", e)),
         }
     }
@@ -25,18 +23,14 @@ impl BtcCli {
     pub fn get_block(&self, height: u64) -> Result<Block> {
         let block_hash = self.rpc.get_block_hash(height).unwrap();
         match self.rpc.get_block(&block_hash) {
-            Ok(block) => {
-                return Ok(block);
-            }
+            Ok(block) => Ok(block),
             Err(e) => Err(anyhow!("Failed to fetch block: {:?}", e)),
         }
     }
 
     pub fn get_block_by_hash(&self, block_hash: BlockHash) -> Result<Block> {
         match self.rpc.get_block(&block_hash) {
-            Ok(block) => {
-                return Ok(block);
-            }
+            Ok(block) => Ok(block),
             Err(e) => Err(anyhow!("Failed to fetch block: {:?}", e)),
         }
     }
@@ -59,7 +53,7 @@ impl BtcCli {
         &self,
         txid: &bitcoin::Txid,
     ) -> Result<(GetRawTransactionResult, Transaction)> {
-        match self.rpc.get_raw_transaction_info(&txid, None) {
+        match self.rpc.get_raw_transaction_info(txid, None) {
             Ok(raw_tx) => match raw_tx.transaction() {
                 Ok(tx) => Ok((raw_tx.clone(), tx.clone())),
                 Err(e) => Err(anyhow!("Error convert raw tx to tx: {}", e)),
@@ -69,7 +63,7 @@ impl BtcCli {
     }
 
     pub fn get_tx_out(&self, txid: &bitcoin::Txid, vout: u32) -> Result<TxOut> {
-        match self.rpc.get_raw_transaction(&txid, None) {
+        match self.rpc.get_raw_transaction(txid, None) {
             Ok(raw_tx) => {
                 let tx: bitcoin::Transaction = raw_tx;
                 let tx_out = &tx.output[vout as usize];
@@ -83,7 +77,7 @@ impl BtcCli {
     }
 
     pub fn get_tx_out_spent(&self, txid: &bitcoin::Txid, vout: u32) -> Result<bool> {
-        match self.rpc.get_tx_out(&txid, vout, None) {
+        match self.rpc.get_tx_out(txid, vout, None) {
             Ok(Some(_)) => Ok(false),
             Ok(None) => Ok(true),
             Err(e) => Err(anyhow!("Error fetching raw transaction: {}", e)),

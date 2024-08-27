@@ -1,9 +1,6 @@
-use std::str::FromStr;
-
-use repo::indexer::Indexer;
-use sender::tx;
-
 use super::*;
+use repo::indexer::Indexer;
+use std::str::FromStr;
 
 pub struct Syncer {
     btccli: btcrpc::BtcCli,

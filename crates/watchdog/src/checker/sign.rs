@@ -53,7 +53,7 @@ impl SignChecker {
             Ok(out) => witness::check_input_signed(input, &out),
             Err(e) => {
                 error!("get tx output from node failed : {}", e);
-                return false;
+                false
             }
         }
     }
@@ -71,7 +71,7 @@ impl SignChecker {
             }
         }
 
-        if idxs.len() > 0 {
+        if !idxs.is_empty() {
             return Some(idxs);
         }
         None
