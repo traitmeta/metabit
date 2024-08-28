@@ -19,4 +19,4 @@ use std::{sync::Arc, time::Duration};
 use tgbot::TgBot;
 use tokio::{sync::broadcast::Receiver, time::sleep};
 use tracing::{debug, error, info, warn};
-use zmq::{Context, Socket};
+use zmq::Context;

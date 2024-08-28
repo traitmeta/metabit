@@ -226,7 +226,7 @@ async fn handle_tx_thread(
     }
 
     if exist {
-        match sender.send((tx,input_idx as u32)){
+        match sender.send((tx, input_idx as u32)) {
             Ok(_) => {}
             Err(e) => error!("send msg to channel failed. {}", e),
         }

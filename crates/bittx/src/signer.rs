@@ -13,11 +13,11 @@ pub async fn sign_tx(
     prevouts: Vec<TxOut>,
     sign_idx: Vec<usize>,
 ) -> Result<Transaction> {
-    if prevouts.len()==0{
+    if prevouts.is_empty() {
         return Err(anyhow!("no prevouts"));
     }
 
-    if sign_idx.len()==0{
+    if sign_idx.is_empty() {
         return Err(anyhow!("no sign index"));
     }
 
