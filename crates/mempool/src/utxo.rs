@@ -35,7 +35,7 @@ async fn gets_utxo(addr: &str, confirmed: bool) -> Result<Vec<types::Utxo>> {
     // 发起GET请求
     let response = reqwest::get(url).await?;
 
-    debug!("{:?}", response);
+    info!("{:?}", response);
     // 解析JSON响应
     let utxos: Vec<Utxo> = response.json().await?;
 

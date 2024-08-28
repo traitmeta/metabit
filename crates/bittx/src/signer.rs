@@ -13,10 +13,22 @@ pub async fn sign_tx(
     prevouts: Vec<TxOut>,
     sign_idx: Vec<usize>,
 ) -> Result<Transaction> {
+    if prevouts.len()==0{
+        return Err(anyhow!("no prevouts"));
+    }
+
+    if sign_idx.len()==0{
+        return Err(anyhow!("no sign index"));
+    }
+
+    if wif.is_empty() {
+        return Err(anyhow!("wif is empty"));
+    }
+
     let private_key = PrivateKey::from_wif(wif.as_str()).unwrap();
     let mut tx = tx;
     for idx in sign_idx.iter() {
-        sign_taproot_key_spend(private_key, &mut tx, &prevouts, *idx);
+        sign_taproot_key_spend(private_key, &mut tx, &prevouts, *idx)?;
     }
 
     info!("{}", serialize_hex(&tx));
@@ -30,7 +42,7 @@ pub fn sign_taproot(
     idx: usize,
     script: Option<ScriptBuf>,
 ) {
-    match script {
+    let _ = match script {
         Some(s) => sign_taproot_script_spend(private_key, &mut tx, &prevouts, idx, s),
         None => sign_taproot_key_spend(private_key, &mut tx, &prevouts, idx),
     };
@@ -42,7 +54,7 @@ fn sign_taproot_script_spend(
     prevouts: &[TxOut],
     idx: usize,
     script: ScriptBuf,
-) -> TapSighash {
+) -> Result<TapSighash> {
     let mut sighash_cache = SighashCache::new(tx);
     let secp256k1 = Secp256k1::new();
     let sighash = sighash_cache
@@ -73,7 +85,7 @@ fn sign_taproot_script_spend(
         .to_vec(),
     );
 
-    sighash
+    Ok(sighash)
 }
 
 fn sign_taproot_key_spend(
@@ -81,7 +93,7 @@ fn sign_taproot_key_spend(
     tx: &mut Transaction,
     prevouts: &[TxOut],
     idx: usize,
-) -> TapSighash {
+) -> Result<TapSighash> {
     let mut sighash_cache = SighashCache::new(tx);
     let secp256k1 = Secp256k1::new();
     let sighash = sighash_cache
@@ -106,5 +118,5 @@ fn sign_taproot_key_spend(
         .to_vec(),
     );
 
-    sighash
+    Ok(sighash)
 }
