@@ -61,6 +61,10 @@ impl TxSender {
         }
 
         let txouts = txouts.unwrap();
+        if txouts.len() <= 1 {
+            return Ok(());
+        }
+
         info!("send task get db successfully. len {}", txouts.len());
         let mut datas = HashMap::new();
         for tx_out in txouts.into_iter() {
@@ -71,6 +75,10 @@ impl TxSender {
         }
 
         for (tx_id, tx_outs) in &datas {
+            if tx_outs.len() != 2 {
+                continue;
+            }
+
             info!("send task into build. txid {}", tx_id);
             let mut unlock_infos = vec![];
             let mut unlock_outs = vec![];
@@ -92,9 +100,13 @@ impl TxSender {
                 recipient: self.receiver.clone(),
             };
             info!("send task into build finish. txid {}", tx_id);
-            let signed_tx = self.build_and_sign(anchor_info).await?;
-            info!("send transaction started: {:?}", signed_tx.compute_txid());
-            self.send(signed_tx.clone())?;
+            match self.build_and_sign(anchor_info).await {
+                Ok(tx) => {
+                    info!("send transaction started: {:?}", tx.compute_txid());
+                    self.send(tx)?;
+                }
+                Err(e) => return Err(anyhow!("build and sign tx fail : {}", e)),
+            };
         }
         Ok(())
     }

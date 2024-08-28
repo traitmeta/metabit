@@ -89,8 +89,8 @@ async fn main() -> Result<()> {
                     info!("Start Tx Sender Anchor...");
                     match tx_sender.send_task().await{
                         Ok(_)=> {},
-                        Err(err) => {
-                            error!("Error sending task: {:?}", err);
+                        Err(e) => {
+                            error!("Error Sender Anchor: {:?}", e);
                         }
                     }
                 }
@@ -101,12 +101,12 @@ async fn main() -> Result<()> {
                             match tx_sender.send_unsigned_tx(tx,idx).await{
                                 Ok(_)=> {},
                                 Err(err) => {
-                                    error!("Error sending task: {:?}", err);
+                                    error!("Error Sender Unsigned task: {:?}", err);
                                 }
                             }
                         },
                         Err(err) => {
-                            error!("Error sending task: {:?}", err);
+                            error!("Error Sender Unsigned task: {:?}", err);
                         }
                     }
                 }

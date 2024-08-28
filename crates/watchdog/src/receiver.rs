@@ -226,6 +226,10 @@ async fn handle_tx_thread(
     }
 
     if exist {
+        match sender.send((tx,input_idx as u32)){
+            Ok(_) => {}
+            Err(e) => error!("send msg to channel failed. {}", e),
+        }
         info!("Received transaction hash: {}, idx : {}", txid, input_idx);
         let msg = format!("txid:{},idx:{}", txid, input_idx);
         match bot.send_msg_to_topic(msg.as_str()).await {

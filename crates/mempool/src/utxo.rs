@@ -3,6 +3,7 @@ use std::str::FromStr;
 use super::*;
 use bitcoin::{Address, Network};
 use datatypes::types;
+use tracing::info;
 
 #[derive(Debug, Deserialize)]
 struct Utxo {
@@ -26,7 +27,7 @@ pub async fn gets_uspent_utxo(addr: &str) -> Result<Vec<types::Utxo>> {
 
 async fn gets_utxo(addr: &str, confirmed: bool) -> Result<Vec<types::Utxo>> {
     let url = format!("{}/api/address/{}/utxo", MEMPOOL_URL, addr);
-    debug!("{}", url);
+    info!("{}", url);
     let address = Address::from_str(addr)
         .unwrap()
         .require_network(Network::Bitcoin)
