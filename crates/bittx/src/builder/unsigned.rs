@@ -3,16 +3,18 @@ use std::vec;
 
 pub fn build_unsigned_tx(
     adder_utxos: &types::Utxo,
+    input_out: TxOut,
     inputs: Vec<TxIn>,
 ) -> (Transaction, Vec<TxOut>) {
-    let recipient_amount = Amount::from_sat(adder_utxos.value.to_sat() + 100);
+    let recipient_amount = Amount::from_sat(adder_utxos.value.to_sat() + 106);
     let receiver_out = TxOut {
         value: recipient_amount,
         script_pubkey: adder_utxos.script_pubkey.clone(),
     };
 
     let outputs: Vec<TxOut> = vec![receiver_out];
-    let (witness_inputs, prev_fetcher) = build_unsigned_input_and_prev_fetch(adder_utxos, inputs);
+    let (witness_inputs, prev_fetcher) =
+        build_unsigned_input_and_prev_fetch(adder_utxos, input_out, inputs);
     let tx = Transaction {
         version: Version::TWO,
         lock_time: LockTime::ZERO,
@@ -25,6 +27,7 @@ pub fn build_unsigned_tx(
 
 pub fn build_unsigned_input_and_prev_fetch(
     adder_utxo: &types::Utxo,
+    input_out: TxOut,
     mut inputs: Vec<TxIn>,
 ) -> (Vec<TxIn>, Vec<TxOut>) {
     let mut tx_ins = vec![];
@@ -49,6 +52,7 @@ pub fn build_unsigned_input_and_prev_fetch(
         input.witness = Witness::from(wit);
         tx_ins.push(input.clone());
     }
+    prevouts.push(input_out);
 
     (tx_ins, prevouts)
 }

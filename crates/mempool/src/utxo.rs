@@ -1,9 +1,10 @@
-use std::str::FromStr;
+use std::{str::FromStr, thread::sleep};
 
 use super::*;
 use bitcoin::{Address, Network};
 use datatypes::types;
-use tracing::info;
+use tokio::time;
+use tracing::{error, info};
 
 #[derive(Debug, Deserialize)]
 struct Utxo {
@@ -32,14 +33,26 @@ async fn gets_utxo(addr: &str, confirmed: bool) -> Result<Vec<types::Utxo>> {
         .unwrap()
         .require_network(Network::Bitcoin)
         .unwrap();
-    // 发起GET请求
-    let response = reqwest::get(url).await?;
 
-    info!("{:?}", response);
-    // 解析JSON响应
-    let utxos: Vec<Utxo> = response.json().await?;
+    let mut utxos: Vec<Utxo> = vec![];
+    for _i in 0..3 {
+        match reqwest::get(url.clone()).await {
+            Ok(response) => {
+                debug!("{:?}", response);
+                utxos = response.json().await?;
+                break;
+            }
+            Err(e) => {
+                error!("Error fetching utxo: {}", e);
+                sleep(time::Duration::from_secs(10));
+            }
+        }
+    }
 
-    // 输出解析后的数据
+    if utxos.is_empty() {
+        return Err(anyhow!("not found utxo"));
+    }
+
     let mut my_utxos: Vec<types::Utxo> = Vec::new();
     for utxo in utxos {
         let my_utxo = types::Utxo {
@@ -69,9 +82,9 @@ mod tests {
             .with_test_writer() // 将日志输出到测试控制台
             .init();
 
-        let addr = "bc1qdx5yz3j59mgk6tfcedcn0ekud4exlg88s893j8";
+        let addr = "bc1pue6g3pvghm6vp2a0wqnlu9ls4l835mm3mr2kq0lcmw6z8p5p2jasxemufj";
         let utxos = gets_uspent_utxo(addr).await.unwrap();
-        assert!(!utxos.is_empty());
         println!("{:?}", utxos);
+        assert!(!utxos.is_empty());
     }
 }

@@ -6,6 +6,7 @@ use bitcoin::{
 };
 use bitcoin::{TapLeafHash, TapSighash, TapSighashType};
 use secp256k1::{Keypair, Secp256k1};
+use tracing::error;
 
 pub async fn sign_tx(
     wif: String,
@@ -37,15 +38,30 @@ pub async fn sign_tx(
 
 pub fn sign_taproot(
     private_key: PrivateKey,
-    mut tx: Transaction,
+    tx: &mut Transaction,
     prevouts: Vec<TxOut>,
     idx: usize,
     script: Option<ScriptBuf>,
-) {
-    let _ = match script {
-        Some(s) => sign_taproot_script_spend(private_key, &mut tx, &prevouts, idx, s),
-        None => sign_taproot_key_spend(private_key, &mut tx, &prevouts, idx),
+) -> Result<()> {
+    if prevouts.is_empty() {
+        error!("previous outputs is empty");
+        return Err(anyhow!("previous outputs is empty"));
+    }
+
+    let res = match script {
+        Some(s) => {
+            info!("sign taproot script spend");
+            sign_taproot_script_spend(private_key, tx, &prevouts, idx, s)
+        }
+        None => {
+            info!("sign taproot key spend");
+            sign_taproot_key_spend(private_key, tx, &prevouts, idx)
+        }
     };
+    match res {
+        Ok(_) => Ok(()),
+        Err(e) => Err(anyhow!(e)),
+    }
 }
 
 fn sign_taproot_script_spend(

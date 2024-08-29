@@ -2,6 +2,7 @@ use super::*;
 use bitcoin::{Block, BlockHash};
 use bitcoincore_rpc::{json::GetRawTransactionResult, Auth, Client, RpcApi};
 
+#[derive(Debug)]
 pub struct BtcCli {
     rpc: Client,
 }

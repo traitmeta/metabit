@@ -1,7 +1,7 @@
 pub mod tx;
 pub mod utxo;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use bitcoin::{Amount, OutPoint};
 use serde::Deserialize;
 use tracing::debug;

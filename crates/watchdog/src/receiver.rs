@@ -82,7 +82,7 @@ impl TxReceiver {
     // }
 
     #[tracing::instrument(skip_all)]
-    pub async fn handle_recv(&self, tx_data: Vec<u8>, sender: &Sender<(Transaction, u32)>) {
+    pub async fn handle_recv(&self, tx_data: Vec<u8>, sender: Sender<(Transaction, u32)>) {
         if tx_data.is_empty() {
             return;
         }
@@ -212,9 +212,9 @@ async fn handle_tx_thread(
             continue;
         }
 
-        if input.witness[0].len() >= 32 {
-            continue;
-        }
+        // if input.witness[0].len() >= 32 {
+        //     continue;
+        // }
 
         if checker.check_input_sign(input) {
             continue;

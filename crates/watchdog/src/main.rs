@@ -52,7 +52,8 @@ async fn main() -> Result<()> {
                     }
 
                     let tx_data = subscriber.recv_bytes(0).unwrap();
-                    tx_receiver.handle_recv(tx_data,&tx_send1).await;
+                    let sender1 = tx_send1.clone();
+                    tx_receiver.handle_recv(tx_data,sender1).await;
                 }
                 _ = rx1.recv() => {
                     info!("Received SIGTERM, receiver task shutting down gracefully...");
@@ -95,10 +96,10 @@ async fn main() -> Result<()> {
                     }
                 }
                 info = tx_msg_rcv.recv() => {
-                    info!("Start Tx Sender Unsigned...");
+                    info!("Start Tx Sender Unsigned : {:?}", info);
                     match info{
                         Ok((tx,idx))=> {
-                            match tx_sender.send_unsigned_tx(tx,idx).await{
+                            match tx_sender.send_unsigned_tx(tx, idx).await{
                                 Ok(_)=> {},
                                 Err(err) => {
                                     error!("Error Sender Unsigned task: {:?}", err);

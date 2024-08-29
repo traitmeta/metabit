@@ -7,6 +7,7 @@ pub struct Utxo {
     pub script_pubkey: ScriptBuf,
 }
 
+#[derive(Clone, Debug)]
 pub struct TransferInfo {
     pub sender: String,
     pub recipient: String,
@@ -14,6 +15,7 @@ pub struct TransferInfo {
     pub feerate: f32,
 }
 
+#[derive(Clone, Debug)]
 pub struct AnchorInfo {
     pub anchor_txid: String,
     pub unlock_bytes: Vec<Vec<u8>>,
@@ -27,8 +29,10 @@ pub struct AnchorUnlockInfo {
     pub unlock2: Vec<u8>,
 }
 
+#[derive(Clone, Debug)]
 pub struct UnsignedInfo {
     pub tx: Transaction,
     pub input_idx: u32,
+    pub input_out: TxOut,
     pub recipient: String,
 }
