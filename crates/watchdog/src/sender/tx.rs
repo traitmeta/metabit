@@ -2,7 +2,7 @@ use bitcoin::{consensus::encode::serialize_hex, Amount, OutPoint, ScriptBuf};
 use bittx::{build_helper, signer};
 use btcrpc::BtcCli;
 use datatypes::types;
-use std::{collections::HashMap, process::id, str::FromStr};
+use std::{collections::HashMap, str::FromStr};
 
 use super::*;
 

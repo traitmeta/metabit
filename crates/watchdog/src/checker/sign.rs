@@ -50,7 +50,7 @@ impl SignChecker {
             .btccli
             .get_tx_out(&input.previous_output.txid, input.previous_output.vout);
         match prev_out {
-            Ok(out) => witness::check_input_signed(input, &out),
+            Ok(out) => witness::check_input_signed(input, Some(out)),
             Err(e) => {
                 error!("get tx output from node failed : {}", e);
                 false
@@ -65,7 +65,7 @@ impl SignChecker {
                 .btccli
                 .get_tx_out(&input.previous_output.txid, input.previous_output.vout)
                 .unwrap();
-            let signed = witness::check_input_signed(input, &prev_out);
+            let signed = witness::check_input_signed(input, Some(prev_out));
             if !signed {
                 idxs.push(idx);
             }
