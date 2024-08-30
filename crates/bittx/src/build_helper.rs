@@ -56,6 +56,21 @@ pub async fn build_unsigned_tx(info: types::UnsignedInfo) -> Result<(Transaction
     Ok((tx, prev_outs))
 }
 
+pub async fn build_unsigned_tx_with_receive_utxo(
+    info: types::UnsignedInfo,
+    utxo: types::Utxo,
+) -> Result<(Transaction, Vec<TxOut>)> {
+    let mut unsigned_utxos = Vec::new();
+    for (idx, input) in info.tx.input.into_iter().enumerate() {
+        if idx as u32 == info.input_idx {
+            unsigned_utxos.push(input);
+        }
+    }
+
+    let (tx, prev_outs) = unsigned::build_unsigned_tx(&utxo, info.input_out, unsigned_utxos);
+    Ok((tx, prev_outs))
+}
+
 #[cfg(test)]
 mod tests {
     use bitcoin::{

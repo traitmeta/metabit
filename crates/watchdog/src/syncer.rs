@@ -93,7 +93,16 @@ impl Syncer {
                         }
                     }
                     Err(e) => {
+                        //  Error fetching raw transaction: JSON-RPC error: RPC error response: RpcError { code: -5, message: "No such mempool or blockchain transaction. Use gettransaction for wallet transactions.", data: None }
                         error!("get tx out {} vout {} failed : {}", txid, out.vout, e);
+                        if e.to_string()
+                            .contains("No such mempool or blockchain transaction")
+                        {
+                            let effect_rows = self
+                                .dao
+                                .update_anchor_tx_confirmed_height(-1, out.tx_id.clone()).await;
+                            info!("update_anchor_tx_confirmed_height : {:?}", effect_rows);
+                        }
                     }
                 }
             }

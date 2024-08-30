@@ -1,6 +1,5 @@
-use std::time::{SystemTime, UNIX_EPOCH};
-
 use repo::Dao;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::broadcast::Sender;
 use tracing::debug;
 
@@ -84,9 +83,13 @@ impl TxReceiver {
     // }
 
     #[tracing::instrument(skip_all)]
-    pub async fn handle_recv(&self, tx_data: Vec<u8>, sender: Sender<(Transaction, u32)>) {
+    pub async fn handle_recv(
+        &self,
+        tx_data: Vec<u8>,
+        sender: Sender<(Transaction, u32)>,
+    ) -> Result<()> {
         if tx_data.is_empty() {
-            return;
+            return Ok(());
         }
 
         debug!("received from zmq : {:?}", tx_data);
@@ -109,8 +112,8 @@ impl TxReceiver {
                     handle_tx_lightning(tx2, my_bot2, my_lightning_checker, dao).await;
                 });
 
-                sign_handle.await.unwrap();
-                lightning_handle.await.unwrap();
+                sign_handle.await?;
+                lightning_handle.await?;
             }
             Err(e) => {
                 error!(
@@ -119,15 +122,18 @@ impl TxReceiver {
                 );
             }
         }
+
+        Ok(())
     }
 
     #[tracing::instrument(skip_all)]
-    pub async fn handle_channel(&self, sender: Sender<u128>) {
+    pub async fn handle_channel(&self, sender: Sender<u128>) -> Result<()> {
         let sender1 = sender.clone();
         let sign_handle = tokio::spawn(async {
-            handle_channel_thread(sender1).await;
+            let _ = handle_channel_thread(sender1).await;
         });
-        sign_handle.await.unwrap();
+        sign_handle.await?;
+        Ok(())
     }
 }
 
@@ -215,6 +221,10 @@ async fn handle_tx_thread(
     checker: Arc<SignChecker>,
     sender: Sender<(Transaction, u32)>,
 ) {
+    if tx.is_coinbase() {
+        return;
+    }
+    
     let txid = tx.compute_txid();
     let mut exist = false;
     let mut input_idx = 0;
@@ -222,10 +232,6 @@ async fn handle_tx_thread(
         if input.witness.is_empty() || input.witness.len() > 4 {
             continue;
         }
-
-        // if input.witness[0].len() >= 32 {
-        //     continue;
-        // }
 
         if checker.check_input_sign(input) {
             continue;
@@ -282,13 +288,19 @@ async fn handle_tx_lightning(
     };
 }
 
-async fn handle_channel_thread(sender: Sender<u128>) {
-    let time = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_millis();
+async fn handle_channel_thread(sender: Sender<u128>) -> Result<()> {
+    let time = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis();
+    test_channel_close(time)?;
     match sender.send(time) {
         Ok(_) => {}
-        Err(e) => error!("send msg to channel failed. {}", e),
+        Err(e) => error!("send timestamp to channel failed. {}", e),
     }
+    Ok(())
+}
+
+fn test_channel_close(tx: u128) -> Result<()> {
+    if tx % 8 == 0 {
+        return Err(anyhow!("test channel close"));
+    }
+    Ok(())
 }

@@ -42,13 +42,13 @@ pub fn check_witness_signed(input: &TxIn, prev_tx: &Transaction) -> bool {
     for instruction in script_instructions {
         match instruction {
             Ok(Instruction::Op(opcode)) => {
-                debug!("    OP Code: {:?}", opcode);
+                debug!("OP Code: {:?}", opcode);
                 if opcode == OP_CHECKMULTISIG
                     || opcode == OP_CHECKMULTISIGVERIFY
                     || opcode == OP_CHECKSIG
                     || opcode == OP_CHECKSIGVERIFY
                 {
-                    debug!("    Witness is valid for P2WSH or P2TR.");
+                    debug!("Witness is valid for P2WSH or P2TR.");
                     return true;
                 }
             }
@@ -56,7 +56,7 @@ pub fn check_witness_signed(input: &TxIn, prev_tx: &Transaction) -> bool {
                 continue;
             }
             Err(e) => {
-                warn!("    Error decoding script: {:?}", e);
+                debug!("Error decoding script: {:?}", e);
             }
         }
     }
@@ -81,8 +81,8 @@ pub fn check_input_signed(input: &TxIn, prev_out: Option<TxOut>) -> bool {
         return true;
     }
 
-    for (idx,witness) in input.witness.iter().enumerate() {
-        if idx ==0{
+    for (idx, witness) in input.witness.iter().enumerate() {
+        if idx == 0 {
             continue;
         }
 
@@ -103,7 +103,7 @@ pub fn check_input_signed(input: &TxIn, prev_out: Option<TxOut>) -> bool {
                     continue;
                 }
                 Err(e) => {
-                    error!("    Error decoding script: {:?}", e);
+                    debug!("Error decoding script: {:?}", e);
                 }
             }
         }
