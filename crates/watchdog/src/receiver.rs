@@ -1,3 +1,5 @@
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use repo::Dao;
 use tokio::sync::broadcast::Sender;
 use tracing::debug;
@@ -117,6 +119,15 @@ impl TxReceiver {
                 );
             }
         }
+    }
+
+    #[tracing::instrument(skip_all)]
+    pub async fn handle_channel(&self, sender: Sender<u128>) {
+        let sender1 = sender.clone();
+        let sign_handle = tokio::spawn(async {
+            handle_channel_thread(sender1).await;
+        });
+        sign_handle.await.unwrap();
     }
 }
 
@@ -269,4 +280,15 @@ async fn handle_tx_lightning(
         Ok(_) => {}
         Err(e) => error!("send msg to tg failed. {}", e),
     };
+}
+
+async fn handle_channel_thread(sender: Sender<u128>) {
+    let time = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
+    match sender.send(time) {
+        Ok(_) => {}
+        Err(e) => error!("send msg to channel failed. {}", e),
+    }
 }

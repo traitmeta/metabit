@@ -26,6 +26,7 @@ async fn main() -> Result<()> {
 
     let (tx, _) = broadcast::channel(1);
     let (tx_send, mut tx_msg_rcv) = broadcast::channel(1024);
+    let (tx_test, mut rx_test) = broadcast::channel(64);
     let mut sigterm = signal(SignalKind::terminate())?;
     let mut sigint = signal(SignalKind::interrupt())?;
     let cfg = config::read_config();
@@ -37,6 +38,7 @@ async fn main() -> Result<()> {
     let tx_receiver = TxReceiver::new(&cfg).await;
     let mut rx1 = tx.subscribe();
     let tx_send1 = tx_send.clone();
+    let tx_test1 = tx_test.clone();
     let receiver_task = tokio::spawn(async move {
         loop {
             tokio::select! {
@@ -54,6 +56,8 @@ async fn main() -> Result<()> {
                     let tx_data = subscriber.recv_bytes(0).unwrap();
                     let sender1 = tx_send1.clone();
                     tx_receiver.handle_recv(tx_data,sender1).await;
+                    let tx_test1 = tx_test1.clone();
+                    tx_receiver.handle_channel(tx_test1).await;
                 }
                 _ = rx1.recv() => {
                     info!("Received SIGTERM, receiver task shutting down gracefully...");
@@ -108,6 +112,16 @@ async fn main() -> Result<()> {
                         },
                         Err(err) => {
                             error!("Error Sender Unsigned task: {:?}", err);
+                        }
+                    }
+                }
+                info = rx_test.recv() => {
+                    match info{
+                        Ok(ts)=> {
+                            info!("Receive Timestamp : {:?}", ts);
+                        },
+                        Err(err) => {
+                            error!("Receive Timestamp failed: {:?}", err);
                         }
                     }
                 }
