@@ -1,10 +1,12 @@
 use anyhow::Result;
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
+
 use tokio::{
     signal::unix::{signal, SignalKind},
-    sync::broadcast,
+    sync::{broadcast, RwLock},
     time::sleep,
 };
+
 use tracing::{debug, error, info};
 use tracing_appender::{
     non_blocking::WorkerGuard,
@@ -16,7 +18,7 @@ use tracing_subscriber::{
     util::SubscriberInitExt,
     EnvFilter, Layer, Registry,
 };
-use watchdog::{config, receiver::TxReceiver, sender::tx::TxSender, syncer::Syncer};
+use watchdog::{config, receiver::TxReceiver, sender::tx::TxSender, syncer::Syncer, utxo};
 use zmq::Context;
 
 #[tokio::main]
@@ -24,7 +26,7 @@ async fn main() -> Result<()> {
     // TIPS: guard must have same long lifetime with main
     let _guard = logger_init();
 
-    let (tx, _) = broadcast::channel(1);
+    let (tx, mut rx) = broadcast::channel(1);
     let (tx_send, mut tx_msg_rcv) = broadcast::channel(1024);
     let mut sigterm = signal(SignalKind::terminate())?;
     let mut sigint = signal(SignalKind::interrupt())?;
@@ -34,6 +36,29 @@ async fn main() -> Result<()> {
     let zmq_url = format!("tcp://{}:{}", cfg.bitcoin.zmq, cfg.bitcoin.zmq_port);
     subscriber.connect(zmq_url.as_str()).unwrap();
     subscriber.set_subscribe(b"rawtx").unwrap();
+
+    let shared_data = Arc::new(RwLock::new(Vec::new()));
+    let shared_data2 = shared_data.clone();
+    let utxo_updater = utxo::UtxoUpdater::new(&cfg, shared_data2);
+    let utxo_update_task = tokio::spawn(async move {
+        loop {
+            tokio::select! {
+                _ = sleep(Duration::from_secs(30)) => {
+                    match utxo_updater.update_utxo().await{
+                        Ok(_) => {}
+                        Err(e) => {
+                            error!("utxo_update_task failed {}", e);
+                        }
+                    }
+                }
+                _ = rx.recv() => {
+                    info!("Received SIGTERM, utxo_update_task shutting down gracefully...");
+                    return;
+                }
+            }
+        }
+    });
+
     let tx_receiver = TxReceiver::new(&cfg).await;
     let mut rx1 = tx.subscribe();
     let tx_send1 = tx_send.clone();
@@ -90,6 +115,7 @@ async fn main() -> Result<()> {
     let tx_sender = TxSender::new(&cfg).await;
     let mut rx3 = tx.subscribe();
     let mut tx_msg_rcv1 = tx_send.subscribe();
+    let shared_data3 = Arc::clone(&shared_data);
     let sender_task = tokio::spawn(async move {
         loop {
             tokio::select! {
@@ -104,9 +130,11 @@ async fn main() -> Result<()> {
                 }
                 info = tx_msg_rcv1.recv() => {
                     info!("Start Tx Sender Unsigned : {:?}", info);
+                    let my_utxos = shared_data3.read().await;
+                    let my_utxos = my_utxos.clone();
                     match info{
                         Ok((tx,idx))=> {
-                            match tx_sender.send_unsigned_tx(tx, idx).await{
+                            match tx_sender.send_unsigned_tx(tx, idx, my_utxos).await{
                                 Ok(_)=> {},
                                 Err(err) => {
                                     error!("Error Sender Unsigned task: {:?}", err);
@@ -140,7 +168,13 @@ async fn main() -> Result<()> {
     });
 
     info!("Start watchdog...");
-    let _ = tokio::join!(receiver_task, syncer_task, sender_task, stop_sig_task);
+    let _ = tokio::join!(
+        receiver_task,
+        syncer_task,
+        sender_task,
+        utxo_update_task,
+        stop_sig_task
+    );
     info!("Close watchdog...");
 
     Ok(())

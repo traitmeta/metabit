@@ -4,33 +4,34 @@ name = "watchdog"
 version = "0.1.0"
 
 [dependencies]
-bittx = { path = "../bittx" }
-datatypes = { path = "../datatypes" }
-tgbot = { path = "../tgbot" }
+bittx = {path = "../bittx"}
+datatypes = {path = "../datatypes"}
+mempool = {path = "../mempool"}
+tgbot = {path = "../tgbot"}
 
 anyhow = "1.0"
 bitcoin = "0.32"
 bitcoincore-rpc = "0.19"
-clap = { version = "4.0", features = ["derive"] }
+clap = {version = "4.0", features = ["derive"]}
 hex = "0.4"
-serde = { version = "1.0", features = ["derive"] }
+serde = {version = "1.0", features = ["derive"]}
 serde_derive = "1.0"
 serde_json = "1.0"
-sqlx = { version = "0.8", features = [
-    "postgres",
-    "runtime-tokio-native-tls",
-    "macros",
-    "chrono",
-] }
-tokio = { version = "1", features = ["full"] }
+sqlx = {version = "0.8", features = [
+  "postgres",
+  "runtime-tokio-native-tls",
+  "macros",
+  "chrono",
+]}
+tokio = {version = "1", features = ["full"]}
 toml = "0.8"
 tracing = "0.1"
 tracing-appender = "0.2"
-tracing-subscriber = { version = "0.3", features = [
-    "env-filter",
-    "json",
-    "chrono",
-    "fmt",
-    "std",
-] }
+tracing-subscriber = {version = "0.3", features = [
+  "env-filter",
+  "json",
+  "chrono",
+  "fmt",
+  "std",
+]}
 zmq = "0.10"

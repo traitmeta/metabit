@@ -1,6 +1,6 @@
 use bitcoin::{Amount, OutPoint, ScriptBuf, Transaction, TxOut};
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct Utxo {
     pub out_point: OutPoint,
     pub value: Amount,

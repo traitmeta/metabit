@@ -6,6 +6,7 @@ pub mod receiver;
 pub mod repo;
 pub mod sender;
 pub mod syncer;
+pub mod utxo;
 
 use anyhow::{anyhow, Result};
 use bitcoin::blockdata::opcodes::all::{
