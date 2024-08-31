@@ -2,16 +2,35 @@ use builder::{anchor, base, unsigned};
 
 use super::*;
 
-pub async fn build_transer_tx(info: types::TransferInfo) -> Result<(Transaction, Vec<TxOut>)> {
+pub async fn build_transer_tx(
+    info: types::TransferInfo,
+    network: Option<Network>,
+) -> Result<(Transaction, Vec<TxOut>)> {
     let utxos = utxo::gets_uspent_utxo(&info.sender).await?;
 
-    // 创建交易对象
     let tx = base::build_transfer_tx(
         &info.sender,
         &info.recipient,
         info.amount,
         info.feerate,
         utxos,
+        network,
+    );
+    Ok(tx)
+}
+
+pub async fn build_transer_tx_with_utxo(
+    info: types::TransferInfo,
+    utxos: Vec<types::Utxo>,
+    network: Option<Network>,
+) -> Result<(Transaction, Vec<TxOut>)> {
+    let tx = base::build_transfer_tx(
+        &info.sender,
+        &info.recipient,
+        info.amount,
+        info.feerate,
+        utxos,
+        network,
     );
     Ok(tx)
 }

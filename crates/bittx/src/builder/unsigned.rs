@@ -47,7 +47,7 @@ pub fn build_unsigned_input_and_prev_fetch(
     for input in &mut inputs {
         let mut wit = input.witness.to_vec();
         if let Some(first_witness) = wit.first_mut() {
-            *first_witness = Vec::new();
+            *first_witness = vec![1];
         }
         input.witness = Witness::from(wit);
         tx_ins.push(input.clone());

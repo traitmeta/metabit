@@ -1,4 +1,5 @@
 use super::*;
+use bitcoin::key::TapTweak;
 use bitcoin::sighash::SighashCache;
 use bitcoin::taproot::LeafVersion;
 use bitcoin::{
@@ -112,16 +113,17 @@ fn sign_taproot_key_spend(
 ) -> Result<TapSighash> {
     let mut sighash_cache = SighashCache::new(tx);
     let secp256k1 = Secp256k1::new();
-    let sighash = sighash_cache
-        .taproot_key_spend_signature_hash(idx, &Prevouts::All(prevouts), TapSighashType::Default)
-        .unwrap();
+    let sighash = sighash_cache.taproot_key_spend_signature_hash(
+        idx,
+        &Prevouts::All(prevouts),
+        TapSighashType::Default,
+    )?;
     let keypair = Keypair::from_secret_key(&secp256k1, &private_key.inner);
-    let sig = secp256k1.sign_schnorr(
-        &secp256k1::Message::from_digest_slice(sighash.as_ref())
-            .expect("should be cryptographically secure hash"),
-        &keypair,
-    );
+    let tweaked = keypair.tap_tweak(&secp256k1, None);
 
+    let msg = secp256k1::Message::from_digest_slice(sighash.as_ref())
+        .expect("should be cryptographically secure hash");
+    let sig = secp256k1.sign_schnorr(&msg, &tweaked.to_inner());
     let witness = sighash_cache
         .witness_mut(idx)
         .expect("getting mutable witness reference should work");

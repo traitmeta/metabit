@@ -7,11 +7,17 @@ pub fn build_transfer_tx(
     amount: u64,
     fee_rate: f32,
     in_utxos: Vec<types::Utxo>,
+    network: Option<Network>,
 ) -> (Transaction, Vec<TxOut>) {
+    let net = network.unwrap_or(Network::Bitcoin);
     let sender_address = Address::from_str(sender)
         .unwrap()
-        .require_network(Network::Bitcoin)
+        .require_network(net)
         .unwrap();
+    info!(
+        "sender address script: {}",
+        sender_address.script_pubkey().to_hex_string()
+    );
     let mut inputs = vec![];
     for utxo in in_utxos.iter() {
         let txin = types::Utxo {
@@ -24,7 +30,7 @@ pub fn build_transfer_tx(
 
     let recipient_address = Address::from_str(receiver)
         .unwrap()
-        .require_network(Network::Bitcoin)
+        .require_network(net)
         .unwrap();
     let recipient_amount = Amount::from_sat(amount);
     let receiver_out = TxOut {
@@ -69,7 +75,7 @@ pub fn build_tx(
     outputs.push(change_output);
     let tx = Transaction {
         version: Version::TWO,
-        lock_time: LockTime::from_time(0).unwrap(),
+        lock_time: LockTime::ZERO,
         input: tx_ins,
         output: outputs,
     };
@@ -95,7 +101,7 @@ fn calc_change_amount(inputs: Vec<types::Utxo>, outputs: &[TxOut], fee_rate: f32
     let output_val = outputs.iter().map(|out| out.value).sum::<Amount>();
     let tx = Transaction {
         version: Version::TWO,
-        lock_time: LockTime::from_time(0).unwrap(),
+        lock_time: LockTime::ZERO,
         input: tx_ins,
         output: outputs.to_owned(),
     };
