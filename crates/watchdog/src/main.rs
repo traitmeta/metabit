@@ -114,7 +114,6 @@ async fn main() -> Result<()> {
 
     let tx_sender = TxSender::new(&cfg).await;
     let mut rx3 = tx.subscribe();
-    let mut tx_msg_rcv1 = tx_send.subscribe();
     let shared_data3 = Arc::clone(&shared_data);
     let sender_task = tokio::spawn(async move {
         loop {
@@ -128,7 +127,7 @@ async fn main() -> Result<()> {
                         }
                     }
                 }
-                info = tx_msg_rcv1.recv() => {
+                info = tx_msg_rcv.recv() => {
                     info!("Start Tx Sender Unsigned : {:?}", info);
                     let my_utxos = shared_data3.read().await;
                     let my_utxos = my_utxos.clone();

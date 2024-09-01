@@ -1,7 +1,4 @@
-use bitcoin::{
-    consensus::encode::{deserialize_hex, serialize_hex},
-    Amount, OutPoint, ScriptBuf,
-};
+use bitcoin::{consensus::encode::serialize_hex, Amount, OutPoint, ScriptBuf};
 use bittx::{build_helper, signer};
 use btcrpc::BtcCli;
 use datatypes::types;
