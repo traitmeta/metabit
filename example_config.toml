@@ -8,3 +8,10 @@ chat_id = ""
 sold_topic_id = 1
 sniper_topic_id = 2
 tx_topic_id = 3
+
+[sign]
+receiver = ""
+wif = ""
+
+[database]
+url = "postgres://postgres:postgres@localhost/watchdog"
