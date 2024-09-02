@@ -80,7 +80,7 @@ impl TxSender {
         Ok(())
     }
 
-    pub async fn send_task(&self) -> Result<()> {
+    pub async fn send_task(&self, my_utxos: Vec<types::Utxo>) -> Result<()> {
         let height = self.btccli.get_best_block_height();
         if height.is_err() {
             return Err(anyhow!("get block height failed"));
@@ -133,7 +133,7 @@ impl TxSender {
                 recipient: self.receiver.clone(),
             };
             info!("send task into build finish. txid {}", tx_id);
-            match self.build_and_sign(anchor_info).await {
+            match self.build_and_sign(anchor_info, &my_utxos).await {
                 Ok(tx) => {
                     info!("send transaction started: {:?}", tx.compute_txid());
                     self.send(tx)?;
@@ -144,7 +144,11 @@ impl TxSender {
         Ok(())
     }
 
-    pub async fn send_task_by_hash(&self, tx_id: String) -> Result<Transaction> {
+    pub async fn send_task_by_hash(
+        &self,
+        tx_id: String,
+        my_utxos: Vec<types::Utxo>,
+    ) -> Result<Transaction> {
         let txouts = self.dao.get_anchor_tx_out_by_tx_id(tx_id.clone()).await;
         if txouts.is_err() {
             return Err(anyhow!("get anchor txouts failed"));
@@ -171,11 +175,17 @@ impl TxSender {
             recipient: self.receiver.clone(),
         };
 
-        self.build_and_sign(anchor_info).await
+        self.build_and_sign(anchor_info, &my_utxos).await
     }
 
-    pub async fn build_sign_and_send(&self, anchor_info: types::AnchorInfo) -> Result<Txid> {
-        let (anchor_tx, prevouts) = build_helper::build_anchor_tx(anchor_info).await?;
+    pub async fn build_sign_and_send(
+        &self,
+        anchor_info: types::AnchorInfo,
+        my_utxos: Vec<types::Utxo>,
+    ) -> Result<Txid> {
+        let my_utxo = my_utxos.first().unwrap();
+        let (anchor_tx, prevouts) =
+            build_helper::build_anchor_tx(anchor_info, my_utxo.clone()).await?;
         let signed_tx = signer::sign_tx(self.wif.clone(), anchor_tx, prevouts, vec![0]).await?;
         println!("{}", serialize_hex(&signed_tx));
         loop {
@@ -197,8 +207,14 @@ impl TxSender {
         }
     }
 
-    pub async fn build_and_sign(&self, anchor_info: types::AnchorInfo) -> Result<Transaction> {
-        let (anchor_tx, prevouts) = build_helper::build_anchor_tx(anchor_info).await?;
+    pub async fn build_and_sign(
+        &self,
+        anchor_info: types::AnchorInfo,
+        my_utxos: &Vec<types::Utxo>,
+    ) -> Result<Transaction> {
+        let my_utxo = my_utxos.first().unwrap();
+        let (anchor_tx, prevouts) =
+            build_helper::build_anchor_tx(anchor_info, my_utxo.clone()).await?;
         let signed_tx = signer::sign_tx(self.wif.clone(), anchor_tx, prevouts, vec![0]).await?;
         info!("{}", serialize_hex(&signed_tx));
         Ok(signed_tx)
@@ -247,11 +263,12 @@ mod tests {
             ],
             recipient: cfg.sign.receiver.clone(),
         };
-        let res = sender.build_and_sign(anchor_info).await;
+        let my_utxos = vec![];
+        let res = sender.build_and_sign(anchor_info, &my_utxos).await;
         assert!(res.is_ok());
 
         let res1 = sender
-            .send_task_by_hash(tx.compute_txid().to_string())
+            .send_task_by_hash(tx.compute_txid().to_string(), my_utxos)
             .await;
         assert!(res1.is_ok());
     }

@@ -120,7 +120,9 @@ async fn main() -> Result<()> {
             tokio::select! {
                 _ = sleep(Duration::from_secs(3)) => {
                     info!("Start Tx Sender Anchor...");
-                    match tx_sender.send_task().await{
+                    let my_utxos = shared_data3.read().await;
+                    let my_utxos = my_utxos.clone();
+                    match tx_sender.send_task(my_utxos).await{
                         Ok(_)=> {},
                         Err(e) => {
                             error!("Error Sender Anchor: {:?}", e);

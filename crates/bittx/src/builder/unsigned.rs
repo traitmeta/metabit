@@ -6,7 +6,7 @@ pub fn build_unsigned_tx(
     input_out: TxOut,
     inputs: Vec<TxIn>,
 ) -> (Transaction, Vec<TxOut>) {
-    let recipient_amount = Amount::from_sat(adder_utxos.value.to_sat() + 106);
+    let recipient_amount = Amount::from_sat(adder_utxos.value.to_sat() + 166);
     let receiver_out = TxOut {
         value: recipient_amount,
         script_pubkey: adder_utxos.script_pubkey.clone(),

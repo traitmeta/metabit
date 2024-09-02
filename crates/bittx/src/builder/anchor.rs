@@ -95,3 +95,9 @@ pub fn build_anchor_witness(payload: &Vec<u8>) -> Witness {
 
     witness
 }
+
+pub fn calc_script_pubkey(wit: Witness) -> Result<ScriptBuf> {
+    let redeem_script = wit.last().unwrap();
+    let script_pubkey = ScriptBuf::from_bytes(redeem_script.to_vec()).to_p2wsh();
+    Ok(script_pubkey)
+}

@@ -35,12 +35,10 @@ pub async fn build_transer_tx_with_utxo(
     Ok(tx)
 }
 
-pub async fn build_anchor_tx(info: types::AnchorInfo) -> Result<(Transaction, Vec<TxOut>)> {
-    let utxos = utxo::gets_uspent_utxo(&info.recipient).await?;
-    if utxos.is_empty() {
-        return Err(anyhow!("not found unspent utxo"));
-    }
-
+pub async fn build_anchor_tx(
+    info: types::AnchorInfo,
+    my_utxo: types::Utxo,
+) -> Result<(Transaction, Vec<TxOut>)> {
     let mut anchor_utxos = Vec::new();
     for (out, out_point) in info.unlock_outs.iter() {
         anchor_utxos.push(types::Utxo {
@@ -50,9 +48,8 @@ pub async fn build_anchor_tx(info: types::AnchorInfo) -> Result<(Transaction, Ve
         });
     }
 
-    let my_utxo = utxos.first().unwrap();
     let (tx, prev_outs) =
-        anchor::build_lightning_anchor_tx(my_utxo, anchor_utxos, info.unlock_bytes);
+        anchor::build_lightning_anchor_tx(&my_utxo, anchor_utxos, info.unlock_bytes);
 
     Ok((tx, prev_outs))
 }
@@ -94,9 +91,10 @@ pub async fn build_unsigned_tx_with_receive_utxo(
 mod tests {
     use bitcoin::{
         consensus::encode::{deserialize_hex, serialize_hex},
-        OutPoint, Transaction,
+        Amount, OutPoint, Transaction,
     };
     use datatypes::types;
+    use mempool::utxo;
 
     use crate::build_helper::build_unsigned_tx;
 
@@ -129,7 +127,13 @@ mod tests {
             recipient: "bc1pdwy6qmwjhfng95v96avuer8za40vy7f66u5cphn9e09dzr6eemfstalyac".to_string(),
         };
 
-        let res = build_anchor_tx(data).await;
+        let utxos = utxo::gets_uspent_utxo(&data.recipient).await.unwrap();
+        if utxos.is_empty() {
+            eprintln!("not found unspent utxo");
+            assert!(false);
+        }
+
+        let res = build_anchor_tx(data, utxos.first().unwrap().clone()).await;
         assert!(res.is_ok());
 
         println!("{}", serialize_hex(&res.unwrap().0))

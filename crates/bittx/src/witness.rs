@@ -1,3 +1,10 @@
+use bitcoin::hashes::sha256;
+use bitcoin::hashes::Hash;
+use bitcoin::key::PublicKey as BitcoinPubKey;
+use bitcoin::opcodes::OP_0;
+use hex::FromHex;
+use secp256k1::ecdsa::Signature;
+use secp256k1::{Message, PublicKey, Secp256k1};
 use tracing::debug;
 
 use super::*;
@@ -178,11 +185,29 @@ pub fn is_signed_witness(witness: &Witness) -> bool {
     }
 }
 
+// let script_pubkey = ScriptBuf::from_bytes(redeem_script).to_p2wsh();
+pub fn reconstruct_v0_p2wsh_script_pubkey(redeem_script: Vec<u8>) -> ScriptBuf {
+    // Last item in the witness stack is the redeem script
+    // let redeem_script = &witness[witness.len() - 1];
+    // let redeem_script = Vec::from_hex(witness).expect("Invalid hex string for witness");
+
+    // Compute the SHA256 hash of the redeem script
+    let script_hash = sha256::Hash::hash(&redeem_script);
+
+    // Create the scriptPubKey (OP_0 followed by the 32-byte hash)
+    let mut script_pubkey = ScriptBuf::new();
+    script_pubkey.push_opcode(OP_0);
+    script_pubkey.push_slice(&script_hash.as_byte_array());
+
+    script_pubkey
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use bitcoin::blockdata::transaction::Transaction;
     use bitcoin::consensus::encode::deserialize_hex;
+    use bitcoin::script;
 
     #[test]
     fn tx_all_signed_test() {
@@ -227,5 +252,19 @@ mod tests {
         let unsigned_input = check_witness_with_prev_txs(&tx, prev_txs);
         assert!(unsigned_input.is_some());
         assert_eq!(unsigned_input.unwrap().len(), 1);
+    }
+
+    #[test]
+    fn reconstruct_v0_p2wsh_script_pubkey_test() {
+        let redeem_script = Vec::from_hex(
+            "2103bb61c04cafceb91a0241f317921efbfedf32042479583a665a7ca8f0b6007e9cac736460b268",
+        )
+        .expect("Invalid hex string for witness");
+        let script_buf = reconstruct_v0_p2wsh_script_pubkey(redeem_script.clone());
+        println!("Script {}", script_buf);
+        assert!(script_buf.is_p2wsh());
+        let script_buf1 = ScriptBuf::from_bytes(redeem_script).to_p2wsh();
+        println!("Script {}", script_buf1);
+        assert!(script_buf1.is_p2wsh());
     }
 }
