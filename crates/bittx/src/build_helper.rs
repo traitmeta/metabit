@@ -132,8 +132,8 @@ mod tests {
             eprintln!("not found unspent utxo");
             assert!(false);
         }
-
-        let res = build_anchor_tx(data, utxos.first().unwrap().clone()).await;
+        let my_utxo = &utxos[0];
+        let res = build_anchor_tx(data, my_utxo.clone()).await;
         assert!(res.is_ok());
 
         println!("{}", serialize_hex(&res.unwrap().0))

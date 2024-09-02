@@ -1,3 +1,6 @@
+use builder::anchor::build_anchor_redeem_script;
+use types::AnchorUnlockDetail;
+
 use super::*;
 
 // this is the simple implementation
@@ -24,6 +27,46 @@ pub fn check_lightning_channel_close(tx: &Transaction) -> Option<types::AnchorUn
 
     let in_witness = &tx.input[0].witness;
     is_multisig_2_of_2(in_witness)
+}
+
+pub fn check_lightning_channel_closed(tx: &Transaction) -> Result<Vec<types::AnchorUnlockDetail>> {
+    if tx.input.len() != 1 {
+        return Err(anyhow!("tx input len must be 1"));
+    }
+
+    if tx.output.len() < 2 {
+        return Err(anyhow!("tx output len must more then 2"));
+    }
+
+    let in_witness = &tx.input[0].witness;
+    match is_multisig_2_of_2(in_witness) {
+        Some(multi_sign) => {
+            let redeem_script1 = build_anchor_redeem_script(&multi_sign.unlock1);
+            let redeem_script2 = build_anchor_redeem_script(&multi_sign.unlock1);
+            let redeem_scripts = [redeem_script1, redeem_script2];
+            let mut anchor_details = vec![];
+            for out in tx.output.iter() {
+                let mut redeem_script_hex = None;
+                if out.script_pubkey == redeem_scripts[0].to_p2wsh() {
+                    redeem_script_hex = Some(redeem_scripts[0].to_hex_string());
+                } else if out.script_pubkey == redeem_scripts[1].to_p2wsh() {
+                    redeem_script_hex = Some(redeem_scripts[1].to_hex_string());
+                }
+
+                if let Some(redeem_script_hex) = redeem_script_hex {
+                    let detail = AnchorUnlockDetail {
+                        redeem_script_hex,
+                        out_value: out.value.to_sat(),
+                        nsequence: 16,
+                    };
+                    anchor_details.push(detail);
+                }
+            }
+
+            Ok(anchor_details)
+        }
+        None => Err(anyhow!("not 2-2 multisig")),
+    }
 }
 
 // 2 <pubkey1> <pubkey2> 2 OP_CHECKMULTISIG

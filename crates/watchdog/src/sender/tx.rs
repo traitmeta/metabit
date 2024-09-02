@@ -210,7 +210,7 @@ impl TxSender {
     pub async fn build_and_sign(
         &self,
         anchor_info: types::AnchorInfo,
-        my_utxos: &Vec<types::Utxo>,
+        my_utxos: &[types::Utxo],
     ) -> Result<Transaction> {
         let my_utxo = my_utxos.first().unwrap();
         let (anchor_tx, prevouts) =

@@ -30,6 +30,13 @@ pub struct AnchorUnlockInfo {
 }
 
 #[derive(Clone, Debug)]
+pub struct AnchorUnlockDetail {
+    pub redeem_script_hex: String,
+    pub out_value: u64,
+    pub nsequence: u64,
+}
+
+#[derive(Clone, Debug)]
 pub struct UnsignedInfo {
     pub tx: Transaction,
     pub input_idx: u32,

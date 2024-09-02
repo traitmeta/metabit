@@ -1,10 +1,6 @@
 use bitcoin::hashes::sha256;
 use bitcoin::hashes::Hash;
-use bitcoin::key::PublicKey as BitcoinPubKey;
 use bitcoin::opcodes::OP_0;
-use hex::FromHex;
-use secp256k1::ecdsa::Signature;
-use secp256k1::{Message, PublicKey, Secp256k1};
 use tracing::debug;
 
 use super::*;
@@ -197,7 +193,7 @@ pub fn reconstruct_v0_p2wsh_script_pubkey(redeem_script: Vec<u8>) -> ScriptBuf {
     // Create the scriptPubKey (OP_0 followed by the 32-byte hash)
     let mut script_pubkey = ScriptBuf::new();
     script_pubkey.push_opcode(OP_0);
-    script_pubkey.push_slice(&script_hash.as_byte_array());
+    script_pubkey.push_slice(script_hash.as_byte_array());
 
     script_pubkey
 }
@@ -208,6 +204,7 @@ mod tests {
     use bitcoin::blockdata::transaction::Transaction;
     use bitcoin::consensus::encode::deserialize_hex;
     use bitcoin::script;
+    use hex::FromHex;
 
     #[test]
     fn tx_all_signed_test() {

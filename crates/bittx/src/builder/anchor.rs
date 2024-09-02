@@ -96,6 +96,20 @@ pub fn build_anchor_witness(payload: &Vec<u8>) -> Witness {
     witness
 }
 
+pub fn build_anchor_redeem_script(payload: &Vec<u8>) -> ScriptBuf {
+    let payload: &PushBytes = payload.as_slice().try_into().unwrap();
+    Builder::new()
+        .push_opcode(OP_PUSHBYTES_33)
+        .push_slice(payload)
+        .push_opcode(OP_CHECKSIG)
+        .push_opcode(OP_IFDUP)
+        .push_opcode(OP_NOTIF)
+        .push_opcode(OP_PUSHNUM_16)
+        .push_opcode(OP_CSV)
+        .push_opcode(OP_ENDIF)
+        .into_script()
+}
+
 pub fn calc_script_pubkey(wit: Witness) -> Result<ScriptBuf> {
     let redeem_script = wit.last().unwrap();
     let script_pubkey = ScriptBuf::from_bytes(redeem_script.to_vec()).to_p2wsh();
