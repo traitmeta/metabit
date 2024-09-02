@@ -54,6 +54,13 @@ pub async fn build_anchor_tx(
     Ok((tx, prev_outs))
 }
 
+pub async fn build_batch_anchor_tx(
+    info: types::AnchorsInfo,
+    my_utxo: types::Utxo,
+) -> Result<(Transaction, Vec<TxOut>)> {
+    anchor::build_anchor_sweep_tx(&my_utxo, info.details)
+}
+
 pub async fn build_unsigned_tx(info: types::UnsignedInfo) -> Result<(Transaction, Vec<TxOut>)> {
     let utxos = utxo::gets_uspent_utxo(&info.recipient).await?;
     if utxos.is_empty() {

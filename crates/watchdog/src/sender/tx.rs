@@ -1,5 +1,5 @@
 use bitcoin::{consensus::encode::serialize_hex, Amount, OutPoint, ScriptBuf};
-use bittx::{build_helper, signer};
+use bittx::{build_helper, builder::anchor, signer};
 use btcrpc::BtcCli;
 use datatypes::types;
 use std::{collections::HashMap, str::FromStr};
@@ -201,7 +201,7 @@ impl TxSender {
                     {
                         return Err(e);
                     }
-                    sleep(Duration::from_secs(10)).await;
+                    sleep(Duration::from_secs(1)).await;
                 }
             }
         }
@@ -218,6 +218,45 @@ impl TxSender {
         let signed_tx = signer::sign_tx(self.wif.clone(), anchor_tx, prevouts, vec![0]).await?;
         info!("{}", serialize_hex(&signed_tx));
         Ok(signed_tx)
+    }
+
+    pub async fn anchor_closed_task(&self, my_utxos: Vec<types::Utxo>) -> Result<()> {
+        let height = self.btccli.get_best_block_height();
+        if height.is_err() {
+            return Err(anyhow!("get block height failed"));
+        }
+
+        debug!("send task get block height successfully");
+        let height = height.unwrap();
+        let infos = self.dao.get_anchor_tx_out(height as i64).await;
+        if infos.is_err() {
+            return Err(anyhow!("get anchor txouts failed"));
+        }
+
+        let mut details = vec![];
+        for info in infos?.iter() {
+            let anchor_info = types::AnchorDetail {
+                anchor_txid: info.tx_id.clone(),
+                vout: info.vout as u32,
+                redeem_script_hex: info.unlock_info.clone(),
+                script_pubkey_hex: info.script_pubkey.clone(),
+                out_value: info.value as u64,
+            };
+            details.push(anchor_info);
+        }
+
+        info!("anchor sweep task build start...");
+        let my_utxo = my_utxos.first().unwrap();
+        match anchor::build_anchor_sweep_tx(&my_utxo, details) {
+            Ok((tx, prevouts)) => {
+                info!("send transaction started: {:?}", tx.compute_txid());
+                let signed_tx = signer::sign_tx(self.wif.clone(), tx, prevouts, vec![0]).await?;
+                println!("{}", serialize_hex(&signed_tx));
+                self.send(signed_tx)?;
+            }
+            Err(e) => return Err(anyhow!("build and sign tx fail : {}", e)),
+        };
+        Ok(())
     }
 }
 

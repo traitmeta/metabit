@@ -45,7 +45,7 @@ pub fn check_lightning_channel_closed(tx: &Transaction) -> Result<Vec<types::Anc
             let redeem_script2 = build_anchor_redeem_script(&multi_sign.unlock1);
             let redeem_scripts = [redeem_script1, redeem_script2];
             let mut anchor_details = vec![];
-            for out in tx.output.iter() {
+            for (idx, out) in tx.output.iter().enumerate() {
                 let mut redeem_script_hex = None;
                 if out.script_pubkey == redeem_scripts[0].to_p2wsh() {
                     redeem_script_hex = Some(redeem_scripts[0].to_hex_string());
@@ -58,6 +58,7 @@ pub fn check_lightning_channel_closed(tx: &Transaction) -> Result<Vec<types::Anc
                         redeem_script_hex,
                         out_value: out.value.to_sat(),
                         nsequence: 16,
+                        vout: idx as u32,
                     };
                     anchor_details.push(detail);
                 }

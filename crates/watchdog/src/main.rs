@@ -122,7 +122,7 @@ async fn main() -> Result<()> {
                     info!("Start Tx Sender Anchor...");
                     let my_utxos = shared_data3.read().await;
                     let my_utxos = my_utxos.clone();
-                    match tx_sender.send_task(my_utxos).await{
+                    match tx_sender.anchor_closed_task(my_utxos).await{
                         Ok(_)=> {},
                         Err(e) => {
                             error!("Error Sender Anchor: {:?}", e);

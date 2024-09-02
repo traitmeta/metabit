@@ -224,7 +224,7 @@ async fn handle_tx_thread(
     if tx.is_coinbase() {
         return;
     }
-    
+
     let txid = tx.compute_txid();
     let mut exist = false;
     let mut input_idx = 0;
@@ -264,7 +264,7 @@ async fn handle_tx_lightning(
 ) {
     let txid = tx.compute_txid();
     let input_idx = 0;
-    let lightning_info = checker.check_anchor(&tx);
+    let lightning_info = checker.check_anchor_closed(&tx);
     if lightning_info.is_none() {
         return;
     }
