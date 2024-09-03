@@ -1,7 +1,4 @@
-use bitcoin::{
-    hex::{Case, DisplayHex},
-    ScriptBuf,
-};
+use bitcoin::hex::{Case, DisplayHex};
 use datatypes::types::AnchorUnlockInfo;
 use repo::anchor::AnchorTxOut;
 
@@ -55,6 +52,10 @@ impl LightningChecker {
 
     pub fn check_anchor_closed(&self, tx: &Transaction) -> Option<Vec<AnchorTxOut>> {
         if let Ok(unlock_info) = bittx::lightning::check_lightning_channel_closed(tx) {
+            if unlock_info.is_empty() {
+                return None;
+            }
+
             info!("find anchor closed {:?}", unlock_info);
             let mut anchor_tx_outs = Vec::new();
             for detail in unlock_info.iter() {

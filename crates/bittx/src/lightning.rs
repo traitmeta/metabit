@@ -41,6 +41,7 @@ pub fn check_lightning_channel_closed(tx: &Transaction) -> Result<Vec<types::Anc
     let in_witness = &tx.input[0].witness;
     match is_multisig_2_of_2(in_witness) {
         Some(multi_sign) => {
+            info!("found multi-sign of 2-2 : {:?}", multi_sign);
             let redeem_script1 = build_anchor_redeem_script(&multi_sign.unlock1);
             let redeem_script2 = build_anchor_redeem_script(&multi_sign.unlock1);
             let redeem_scripts = [redeem_script1, redeem_script2];

@@ -41,6 +41,13 @@ async fn main() -> Result<()> {
     let shared_data2 = shared_data.clone();
     let utxo_updater = utxo::UtxoUpdater::new(&cfg, shared_data2);
     let utxo_update_task = tokio::spawn(async move {
+        match utxo_updater.update_utxo().await {
+            Ok(_) => {}
+            Err(e) => {
+                error!("utxo_update_task failed {}", e);
+            }
+        }
+
         loop {
             tokio::select! {
                 _ = sleep(Duration::from_secs(30)) => {
@@ -106,7 +113,6 @@ async fn main() -> Result<()> {
                 _ = rx2.recv() => {
                     info!("Received SIGTERM, sync task shutting down gracefully...");
                     return;
-
                 }
             }
         }
@@ -118,17 +124,17 @@ async fn main() -> Result<()> {
     let sender_task = tokio::spawn(async move {
         loop {
             tokio::select! {
-                _ = sleep(Duration::from_secs(3)) => {
-                    info!("Start Tx Sender Anchor...");
-                    let my_utxos = shared_data3.read().await;
-                    let my_utxos = my_utxos.clone();
-                    match tx_sender.anchor_closed_task(my_utxos).await{
-                        Ok(_)=> {},
-                        Err(e) => {
-                            error!("Error Sender Anchor: {:?}", e);
-                        }
-                    }
-                }
+                // _ = sleep(Duration::from_secs(3)) => {
+                //     info!("Start Tx Sender Anchor...");
+                //     let my_utxos = shared_data3.read().await;
+                //     let my_utxos = my_utxos.clone();
+                //     match tx_sender.anchor_closed_task(my_utxos).await{
+                //         Ok(_)=> {},
+                //         Err(e) => {
+                //             error!("Error Sender Anchor: {:?}", e);
+                //         }
+                //     }
+                // }
                 info = tx_msg_rcv.recv() => {
                     info!("Start Tx Sender Unsigned : {:?}", info);
                     let my_utxos = shared_data3.read().await;
@@ -136,7 +142,7 @@ async fn main() -> Result<()> {
                     match info{
                         Ok((tx,idx))=> {
                             match tx_sender.send_unsigned_tx(tx, idx, my_utxos).await{
-                                Ok(_)=> {},
+                                Ok(txid)=> {info!("send unsigned transaction : {}",txid);},
                                 Err(err) => {
                                     error!("Error Sender Unsigned task: {:?}", err);
                                 }

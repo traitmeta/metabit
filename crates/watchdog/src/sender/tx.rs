@@ -36,7 +36,7 @@ impl TxSender {
         tx: Transaction,
         idx: u32,
         my_utxos: Vec<types::Utxo>,
-    ) -> Result<()> {
+    ) -> Result<Txid> {
         let input = tx.input.get(idx as usize).unwrap();
         let prev_out = self
             .btccli
@@ -64,7 +64,7 @@ impl TxSender {
                             signed_tx.compute_txid(),
                             serialize_hex(&signed_tx)
                         );
-                        self.send(signed_tx.clone())?;
+                        self.send(signed_tx.clone())
                     }
                     Err(err) => {
                         error!("failed to sign the unsign_tx: {:?}", err);
@@ -77,7 +77,6 @@ impl TxSender {
                 return Err(err);
             }
         }
-        Ok(())
     }
 
     pub async fn send_task(&self, my_utxos: Vec<types::Utxo>) -> Result<()> {
@@ -228,13 +227,13 @@ impl TxSender {
 
         debug!("send task get block height successfully");
         let height = height.unwrap();
-        let infos = self.dao.get_anchor_tx_out(height as i64).await;
-        if infos.is_err() {
-            return Err(anyhow!("get anchor txouts failed"));
+        let infos = self.dao.get_anchor_tx_out(height as i64).await?;
+        if infos.is_empty() {
+            return Err(anyhow!("not found anchor txouts"));
         }
 
         let mut details = vec![];
-        for info in infos?.iter() {
+        for info in infos.iter() {
             let anchor_info = types::AnchorDetail {
                 anchor_txid: info.tx_id.clone(),
                 vout: info.vout as u32,
@@ -246,6 +245,9 @@ impl TxSender {
         }
 
         info!("anchor sweep task build start...");
+        if my_utxos.is_empty() {
+            return Err(anyhow!("my_utxos id empty"));
+        }
         let my_utxo = my_utxos.first().unwrap();
         match anchor::build_anchor_sweep_tx(&my_utxo, details) {
             Ok((tx, prevouts)) => {

@@ -40,6 +40,13 @@ async fn main() -> Result<()> {
     let shared_data2 = shared_data.clone();
     let utxo_updater = utxo::UtxoUpdater::new(&cfg, shared_data2);
     let utxo_update_task = tokio::spawn(async move {
+        match utxo_updater.update_utxo().await {
+            Ok(_) => {}
+            Err(e) => {
+                error!("utxo_update_task failed {}", e);
+            }
+        }
+
         loop {
             tokio::select! {
                 _ = sleep(Duration::from_secs(30)) => {

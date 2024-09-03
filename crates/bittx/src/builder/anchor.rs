@@ -11,6 +11,11 @@ pub fn build_anchor_sweep_tx(
     my_utxo: &types::Utxo,
     anchor_details: Vec<types::AnchorDetail>,
 ) -> Result<(Transaction, Vec<TxOut>)> {
+    if anchor_details.is_empty() {
+        return Err(anyhow!(
+            "build anchor swept transaction anchor_details is empty"
+        ));
+    }
     let recipient_amount = Amount::from_sat(my_utxo.value.to_sat() + 100);
     let receiver_out = TxOut {
         value: recipient_amount,
@@ -34,6 +39,13 @@ pub fn build_anchor_sweep_tx(
     let outputs: Vec<TxOut> = vec![receiver_out];
     match builds_input_and_prev_fetch(&mut tx_ins, &mut prevouts, anchor_details) {
         Ok(_) => {
+            if tx_ins.len() < 3 {
+                return Err(anyhow!(
+                    "build anchor swept transaction input is too less than {}",
+                    tx_ins.len()
+                ));
+            }
+
             let mut tx = Transaction {
                 version: Version::TWO,
                 lock_time: LockTime::ZERO,
