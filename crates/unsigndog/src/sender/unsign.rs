@@ -25,12 +25,12 @@ impl UnsginSender {
         self.btccli.send_tx(&tx)
     }
 
-    pub fn send_unsigned_tx(
+    pub async fn send_unsigned_tx(
         &self,
         tx: &Transaction,
         idx: u32,
         my_utxos: &[types::Utxo],
-    ) -> Result<()> {
+    ) -> Result<String> {
         let input = tx.input.get(idx as usize).unwrap();
         let prev_out = self
             .btccli
@@ -48,7 +48,6 @@ impl UnsginSender {
 
         let my_utxo = my_utxos.first().unwrap();
         info!("start build unsign_tx...");
-        // match build_helper::build_unsigned_tx(info).await {
         match build_helper::build_unsigned_tx_with_receive_utxo(info, my_utxo.clone()) {
             Ok((unsigned_tx, prevouts)) => {
                 match signer::sign_tx(self.wif.clone(), unsigned_tx, prevouts, vec![0]) {
@@ -58,7 +57,26 @@ impl UnsginSender {
                             signed_tx.compute_txid(),
                             serialize_hex(&signed_tx)
                         );
-                        self.send(signed_tx.clone())?;
+                        let mut txid = None;
+                        match self.send(signed_tx.clone()) {
+                            Ok(id) => {
+                                info!("sent tx to my node success, hash: {}", id);
+                                txid = Some(id.to_string());
+                            }
+                            Err(e) => error!("send tx to my node failed. {}", e),
+                        }
+                        match mempool::tx::send_tx(tx).await {
+                            Ok(id) => {
+                                info!("sent tx to mempool space, hash: {}", id);
+                                txid = Some(id);
+                            }
+                            Err(e) => error!("send tx to mempool space failed. {}", e),
+                        }
+
+                        match txid {
+                            Some(id) => return Ok(id),
+                            None => Err(anyhow!("send tx failed!")),
+                        }
                     }
                     Err(err) => {
                         error!("failed to sign the unsign_tx: {:?}", err);
@@ -71,7 +89,6 @@ impl UnsginSender {
                 return Err(err);
             }
         }
-        Ok(())
     }
 }
 
@@ -109,7 +126,7 @@ mod tests {
             script_pubkey: tx.output[0].script_pubkey.clone(),
         };
 
-        let res1 = sender.send_unsigned_tx(&tx, 1, &[my_utxo]);
+        let res1 = sender.send_unsigned_tx(&tx, 1, &[my_utxo]).await;
         assert!(res1.is_err());
         println!("{:?}", res1.unwrap());
     }

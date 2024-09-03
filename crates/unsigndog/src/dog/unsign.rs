@@ -30,7 +30,7 @@ impl UnsignedDog {
         match deserialize::<Transaction>(&tx_data) {
             Ok(tx) => {
                 debug!("received tx : {}", tx.compute_txid());
-                self.handle_tx_thread(&tx, &my_utxos);
+                self.handle_tx_thread(&tx, &my_utxos).await;
             }
             Err(e) => {
                 error!(
@@ -43,16 +43,18 @@ impl UnsignedDog {
         Ok(())
     }
 
-    fn handle_tx_thread(&self, tx: &Transaction, my_utxo: &[types::Utxo]) {
+    async fn handle_tx_thread(&self, tx: &Transaction, my_utxo: &[types::Utxo]) {
         if tx.is_coinbase() {
             return;
         }
 
         let txid = tx.compute_txid();
-        if self.sign_checker.check_sign_fast(tx) {
+        if !self.sign_checker.check_sign_fast(tx) {
             info!("Received transaction hash: {}, idx : {}", txid, 0);
-            match self.unsgin_sender.send_unsigned_tx(tx, 0, my_utxo) {
-                Ok(_) => {}
+            match self.unsgin_sender.send_unsigned_tx(tx, 0, my_utxo).await {
+                Ok(txid) => {
+                    info!("sent transaction hash: {}", txid);
+                }
                 Err(e) => error!("send msg to channel failed. {}", e),
             }
         }

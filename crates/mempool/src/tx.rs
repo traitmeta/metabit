@@ -1,8 +1,10 @@
 use std::str::FromStr;
 
 use super::*;
-use bitcoin::{Address, Network};
+use anyhow::Ok;
+use bitcoin::{consensus::encode::serialize_hex, psbt::serialize, Address, Network, Transaction};
 use datatypes::types;
+use reqwest::Client;
 
 #[derive(Debug, Deserialize)]
 struct Utxo {
@@ -18,6 +20,15 @@ struct Status {
     _block_height: Option<u32>,
     _block_hash: Option<String>,
     _block_time: Option<u64>,
+}
+
+pub async fn send_tx(tx: &Transaction) -> Result<String> {
+    let url = format!("{}/tx", MEMPOOL_URL);
+    let tx_hex = serialize_hex(tx);
+    let client = Client::new();
+    let response = client.post(url).body(tx_hex).send().await?;
+    let resp = response.text().await?;
+    Ok(resp)
 }
 
 pub async fn gets_uspent_utxo(addr: &str) -> Result<Vec<types::Utxo>> {
