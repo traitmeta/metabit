@@ -77,18 +77,18 @@ impl SignChecker {
         None
     }
 
-    pub fn check_sign_fast(&self, tx: &Transaction) -> Option<Vec<usize>> {
-        let mut idxs = vec![];
-        for (idx, input) in tx.input.iter().enumerate() {
-            let signed = witness::check_input_signed(input, None);
-            if !signed {
-                idxs.push(idx);
-            }
+    pub fn check_sign_fast(&self, tx: &Transaction) -> bool {
+        if tx.input.len() != 1 {
+            return true;
         }
 
-        if !idxs.is_empty() {
-            return Some(idxs);
+        let input = &tx.input[0];
+        match self
+            .btccli
+            .get_tx_out(&input.previous_output.txid, input.previous_output.vout)
+        {
+            Ok(prev_out) => witness::check_input_signed(input, Some(prev_out)),
+            Err(_) => true,
         }
-        None
     }
 }

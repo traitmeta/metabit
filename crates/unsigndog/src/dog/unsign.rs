@@ -49,20 +49,12 @@ impl UnsignedDog {
         }
 
         let txid = tx.compute_txid();
-        match self.sign_checker.check_sign_fast(tx) {
-            Some(idxs) => {
-                for idx in idxs.iter() {
-                    info!("Received transaction hash: {}, idx : {}", txid, idx);
-                    match self
-                        .unsgin_sender
-                        .send_unsigned_tx(tx, *idx as u32, my_utxo)
-                    {
-                        Ok(_) => {}
-                        Err(e) => error!("send msg to channel failed. {}", e),
-                    }
-                }
+        if self.sign_checker.check_sign_fast(tx) {
+            info!("Received transaction hash: {}, idx : {}", txid, 0);
+            match self.unsgin_sender.send_unsigned_tx(tx, 0, my_utxo) {
+                Ok(_) => {}
+                Err(e) => error!("send msg to channel failed. {}", e),
             }
-            None => {}
         }
     }
 }
