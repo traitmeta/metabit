@@ -68,7 +68,7 @@ pub fn check_witness_signed(input: &TxIn, prev_tx: &Transaction) -> bool {
 }
 
 pub fn check_input_signed(input: &TxIn, prev_out: Option<TxOut>) -> bool {
-    if input.witness.len() <= 1 {
+    if input.witness.is_empty() || input.witness.len() <= 1 {
         return true;
     }
 
@@ -77,11 +77,6 @@ pub fn check_input_signed(input: &TxIn, prev_out: Option<TxOut>) -> bool {
         if !(prev.script_pubkey.is_p2wsh() || prev.script_pubkey.is_p2tr()) {
             return true;
         }
-    }
-
-    // try parse witness to script
-    if input.witness.is_empty() {
-        return true;
     }
 
     for (idx, witness) in input.witness.iter().enumerate() {

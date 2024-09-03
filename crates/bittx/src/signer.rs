@@ -9,7 +9,7 @@ use bitcoin::{TapLeafHash, TapSighash, TapSighashType};
 use secp256k1::{Keypair, Secp256k1};
 use tracing::error;
 
-pub async fn sign_tx(
+pub fn sign_tx(
     wif: String,
     tx: Transaction,
     prevouts: Vec<TxOut>,

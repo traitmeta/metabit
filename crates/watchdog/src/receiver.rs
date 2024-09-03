@@ -34,54 +34,6 @@ impl TxReceiver {
         }
     }
 
-    // #[tracing::instrument(skip_all)]
-    // pub async fn recv(
-    //     &self,
-    //     subscriber: Arc<Socket>,
-    //     mut stop_sig: Receiver<bool>,
-    //     sender: Sender<(Transaction, u32)>,
-    // ) {
-    //     info!("Subscribed to raw transactions...");
-    //     loop {
-    //         tokio::select! {
-    //             _ = stop_sig.recv() => {
-    //                 println!("Received exit signal, breaking the loop.");
-    //                 break;
-    //             }
-    //             _ = sleep(Duration::from_millis(1)) => {
-    //                 // let _topic = self.subscriber.recv_msg(0).unwrap();
-    //                 // let tx_data = self.subscriber.recv_bytes(0).unwrap();
-    //                 let _topic = subscriber.recv_msg(0).unwrap();
-    //                 let tx_data = subscriber.recv_bytes(0).unwrap();
-    //                 match deserialize::<Transaction>(&tx_data) {
-    //                     Ok(tx) => {
-    //                         let my_bot = self.bot.clone();
-    //                         let my_sign_checker = self.sign_checker.clone();
-    //                         let tx1 = tx.clone();
-    //                         let sign_handle = tokio::spawn(async {
-    //                             handle_tx_thread(tx1, my_bot,my_sign_checker,sender).await;
-    //                         });
-
-    //                         let my_lightning_checker = self.lightning_checker.clone();
-    //                         let tx2 = tx.clone();
-    //                         let my_bot2 = self.bot.clone();
-    //                         let dao = self.dao.clone();
-    //                         let lightning_handle = tokio::spawn(async {
-    //                             handle_tx_lightning(tx2, my_bot2,my_lightning_checker,dao).await;
-    //                         });
-
-    //                         sign_handle.await.unwrap();
-    //                         lightning_handle.await.unwrap();
-    //                     }
-    //                     Err(_) => {
-    //                         // eprintln!("Failed to deserialize transaction: {}", e);
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
-
     #[tracing::instrument(skip_all)]
     pub async fn handle_recv(
         &self,
@@ -123,16 +75,6 @@ impl TxReceiver {
             }
         }
 
-        Ok(())
-    }
-
-    #[tracing::instrument(skip_all)]
-    pub async fn handle_channel(&self, sender: Sender<u128>) -> Result<()> {
-        let sender1 = sender.clone();
-        let sign_handle = tokio::spawn(async {
-            let _ = handle_channel_thread(sender1).await;
-        });
-        sign_handle.await?;
         Ok(())
     }
 }
@@ -286,21 +228,4 @@ async fn handle_tx_lightning(
         Ok(_) => {}
         Err(e) => error!("send msg to tg failed. {}", e),
     };
-}
-
-async fn handle_channel_thread(sender: Sender<u128>) -> Result<()> {
-    let time = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis();
-    test_channel_close(time)?;
-    match sender.send(time) {
-        Ok(_) => {}
-        Err(e) => error!("send timestamp to channel failed. {}", e),
-    }
-    Ok(())
-}
-
-fn test_channel_close(tx: u128) -> Result<()> {
-    if tx % 8 == 0 {
-        return Err(anyhow!("test channel close"));
-    }
-    Ok(())
 }

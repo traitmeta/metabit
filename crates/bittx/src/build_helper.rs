@@ -79,7 +79,7 @@ pub async fn build_unsigned_tx(info: types::UnsignedInfo) -> Result<(Transaction
     Ok((tx, prev_outs))
 }
 
-pub async fn build_unsigned_tx_with_receive_utxo(
+pub fn build_unsigned_tx_with_receive_utxo(
     info: types::UnsignedInfo,
     utxo: types::Utxo,
 ) -> Result<(Transaction, Vec<TxOut>)> {
