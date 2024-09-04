@@ -23,7 +23,7 @@ struct Status {
 }
 
 pub async fn send_tx(tx: &Transaction) -> Result<String> {
-    let url = format!("{}/tx", MEMPOOL_URL);
+    let url = format!("{}/api/tx", MEMPOOL_URL);
     let tx_hex = serialize_hex(tx);
     let client = Client::new();
     let response = client.post(url).body(tx_hex).send().await?;
